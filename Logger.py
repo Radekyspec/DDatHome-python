@@ -1,7 +1,7 @@
-from logging import getLogger, StreamHandler, FileHandler, Formatter, DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL
-from typing import Optional
-from time import strftime, localtime
 import os
+from logging import getLogger, StreamHandler, FileHandler, Formatter, DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL
+from time import strftime, localtime
+from typing import Optional
 
 
 class Logger:
@@ -26,7 +26,7 @@ class Logger:
             self.level = CRITICAL
 
         try:
-            os.makedirs(os.path.join(os.path.realpath(os.path.dirname(__file__)),  "logs"))
+            os.makedirs(os.path.join(os.path.realpath(os.path.dirname(__file__)), "logs"))
         except (FileExistsError, OSError):
             pass
 
@@ -36,7 +36,7 @@ class Logger:
         stream_handler.setLevel(self.level)
         file_handler = FileHandler(
             filename=os.path.join(os.path.realpath(os.path.dirname(__file__)), "logs",
-                          "{log_time}.log".format(log_time=strftime("%Y-%m-%d", localtime()))),
+                                  "{log_time}.log".format(log_time=strftime("%Y-%m-%d", localtime()))),
             mode="a",
             encoding="utf-8",
         )

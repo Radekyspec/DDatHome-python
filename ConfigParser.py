@@ -1,7 +1,8 @@
 import configparser
 import os
-from Logger import Logger
 import time
+
+from Logger import Logger
 
 
 class ConfigParser:

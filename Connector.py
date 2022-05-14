@@ -2,13 +2,14 @@ import asyncio
 import platform
 import random
 import string
+from urllib.parse import quote
+import shutil
 
 from aiowebsocket.converses import AioWebSocket
 
 from ConfigParser import ConfigParser
 from JobProcessor import JobProcessor
 from Logger import Logger
-from urllib.parse import quote
 
 
 class WSConnector:
@@ -84,13 +85,13 @@ class WSConnector:
         async with AioWebSocket(url) as aws:
             converse = aws.manipulator
             self.logger.info(url)
-            processor = JobProcessor()
+            processor = JobProcessor(interval=self.interval, max_size=self.max_size)
             tasks = [processor.pull_task(converse), processor.receive_task(converse), processor.process(converse),
                      processor.monitor()]
             # await converse.send(bytes("DDDhttp", encoding="utf-8"))
-            self.logger.info("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
+            self.logger.info("D" * shutil.get_terminal_size().columns)
             self.logger.info("Thank you for participating DD@Home,")
             self.logger.info("Please read README.md for more information;")
             self.logger.info("Edit config.ini to modify your settings.")
-            self.logger.info("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
+            self.logger.info("D" * shutil.get_terminal_size().columns)
             await asyncio.gather(*tasks)

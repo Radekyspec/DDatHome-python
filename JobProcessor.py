@@ -1,10 +1,12 @@
-import aiohttp
-import json
 import asyncio
+import json
 import queue
 import time
-from Logger import Logger
+
+import aiohttp
 from async_timeout import timeout
+
+from Logger import Logger
 
 
 class JobProcessor:
