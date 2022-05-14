@@ -1,0 +1,2 @@
+aiowebsocket==1.0.0.dev2
+aiohttp==3.8.1
