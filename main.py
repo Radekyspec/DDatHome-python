@@ -3,6 +3,7 @@ import os
 import sys
 import shutil
 
+from aiohttp.client_exceptions import ServerDisconnectedError
 from Connector import WSConnector
 from Logger import Logger
 
@@ -11,7 +12,7 @@ async def main(w_logger):
     connector = WSConnector()
     try:
         await connector.connect()
-    except (OSError, ConnectionError, ConnectionResetError, ConnectionRefusedError, ConnectionAbortedError):
+    except (OSError, ConnectionError, ConnectionResetError, ConnectionRefusedError, ServerDisconnectedError):
         w_logger.error("WS Server disconnected. Reconnecting...")
         await main(w_logger)
 
