@@ -3,7 +3,6 @@ import platform
 import random
 import string
 from urllib.parse import quote
-import shutil
 
 from aiowebsocket.converses import AioWebSocket
 
@@ -89,9 +88,4 @@ class WSConnector:
             tasks = [processor.pull_task(converse), processor.receive_task(converse), processor.process(converse),
                      processor.monitor()]
             # await converse.send(bytes("DDDhttp", encoding="utf-8"))
-            self.logger.info("D" * shutil.get_terminal_size().columns)
-            self.logger.info("Thank you for participating DD@Home,")
-            self.logger.info("Please read README.md for more information;")
-            self.logger.info("Edit config.ini to modify your settings.")
-            self.logger.info("D" * shutil.get_terminal_size().columns)
             await asyncio.gather(*tasks)
