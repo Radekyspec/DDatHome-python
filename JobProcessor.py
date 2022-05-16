@@ -31,7 +31,7 @@ class JobProcessor:
             text = json.loads(receive_text)
             self.logger.debug("Receive a task from server.")
             self.logger.debug(receive_text)
-            if text["data"]["type"]:
+            if "data" in text and "type" in text["data"]:
                 try:
                     self.send_queue.get(block=False)
                 except queue.Empty:
