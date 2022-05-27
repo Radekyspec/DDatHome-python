@@ -47,7 +47,7 @@ class JobProcessor:
     async def process(self, websockets):
         async with aiohttp.ClientSession() as client:
             while True:
-                if self.queue.qsize() > 0:
+                if not self.queue.empty():
                     text = self.queue.get(block=False)
                     key = text[1]
                     url = text[2]
@@ -69,4 +69,4 @@ class JobProcessor:
     async def monitor(self):
         while True:
             await asyncio.sleep(600)
-            self.logger.info("WS | HTTP: " + " | ".join([str(self.send_queue.qsize()), str(self.queue.qsize())]))
+            self.logger.debug("WS | HTTP: " + " | ".join([str(self.send_queue.qsize()), str(self.queue.qsize())]))

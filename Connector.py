@@ -4,7 +4,8 @@ import random
 import string
 from urllib.parse import quote
 
-from aiowebsocket.converses import AioWebSocket
+from aiowebsocket.converses import AioWebSocket, SocketState, Converse, HandShake
+from aiowebsocket.parts import parse_uri
 
 from ConfigParser import ConfigParser
 from JobProcessor import JobProcessor
@@ -12,7 +13,7 @@ from Logger import Logger
 
 
 class WSConnector:
-    VERSION = "1.0.1"
+    VERSION = "1.0.2"
     DEFAULT_INTERVAL = 1000
     DEFAULT_SIZE = 10
     parser = ConfigParser()
@@ -25,6 +26,7 @@ class WSConnector:
         self.logger = Logger(logger_name="ws").get_logger()
         self.interval = self.interval()
         self.max_size = self.max_size()
+        self.aws = None
 
     def name(self):
         name = self.parser.get_parser()["Settings"]["name"]
@@ -81,11 +83,63 @@ class WSConnector:
             uuid=self.uuid,
             name=quote(self.name.encode("utf-8")),
         )
-        async with AioWebSocket(url) as aws:
-            converse = aws.manipulator
+        if self.aws is not None:
+            await self.aws.close_connection()
+        async with WS(url) as aws:
+            self.aws = aws
+            converse = self.aws.manipulator
             self.logger.info(url)
             processor = JobProcessor(interval=self.interval, max_size=self.max_size)
             tasks = [processor.pull_task(converse), processor.receive_task(converse), processor.process(converse),
                      processor.monitor()]
             # await converse.send(bytes("DDDhttp", encoding="utf-8"))
             await asyncio.gather(*tasks)
+
+
+class WS(AioWebSocket):
+    def __init__(self, uri: str):
+        self.logger = Logger(logger_name="ws").get_logger()
+        super().__init__(uri)
+
+    async def create_connection(self):
+        """Create connection.
+        Check the current connection status.
+        Send out a handshake and check the result。
+        """
+        if self.state is not SocketState.zero.value:
+            raise ConnectionError('Connection is already exists.')
+        remote = scheme, host, port, resource, ssl = parse_uri(self.uri)
+        reader, writer = await asyncio.open_connection(host=host, port=port, ssl=ssl)
+        self.reader = reader
+        self.writer = writer
+        self.hands = HandShake(remote, reader, writer,
+                               headers=self.headers,
+                               union_header=self.union_header)
+        await self.hands.shake_()
+        status_code = await self.hands.shake_result()
+        if status_code != 101:
+            raise ConnectionError('Connection failed,status code:{code}'.format(code=status_code))
+        self.converse = NewConverse(reader, writer)
+        self.state = SocketState.opened.value
+
+    async def close_connection(self):
+        """Close connection.
+        Check connection status before closing.
+        Send Closed Frame to Server.
+        """
+        if self.state is SocketState.closed.value:
+            raise ConnectionError('SocketState is closed, can not close.')
+        if self.state is SocketState.closing:
+            self.logger.warning('SocketState is closing')
+        await self.converse.close(message=b'')
+
+
+class NewConverse(Converse):
+    async def close(self, message,
+                    fin: bool = True, mask: bool = True):
+        """Send close message to server """
+
+        if isinstance(message, str):
+            message = message.encode()
+        code = 0x08
+        await self.frame.write(fin=fin, code=code, message=message, mask=mask)
