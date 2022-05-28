@@ -19,7 +19,7 @@ async def main(connector, w_logger):
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    logger = Logger(logger_name="start", level="DEBUG").get_logger()
+    logger = Logger(logger_name="start").get_logger()
     logger.info("D" * (shutil.get_terminal_size().columns - 34))
     logger.info("Thank you for participating DD@Home,")
     logger.info("Please read README.md for more information;")
