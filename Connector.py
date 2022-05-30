@@ -12,7 +12,7 @@ from JobProcessor import JobProcessor
 from Logger import Logger
 
 
-class WSConnector:
+class Connector:
     VERSION = "1.0.2"
     DEFAULT_INTERVAL = 1000
     DEFAULT_SIZE = 10
@@ -108,7 +108,6 @@ class WSConnector:
 
 class WS(AioWebSocket):
     def __init__(self, uri: str):
-        self.logger = Logger(logger_name="ws").get_logger()
         super().__init__(uri)
 
     async def create_connection(self):
@@ -140,7 +139,7 @@ class WS(AioWebSocket):
         if self.state is SocketState.closed.value:
             raise ConnectionError('SocketState is closed, can not close.')
         if self.state is SocketState.closing:
-            self.logger.warning('SocketState is closing')
+            print('SocketState is closing')
         await self.converse.send(message=b'', closed=True)
 
 
