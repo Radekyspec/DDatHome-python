@@ -4,7 +4,7 @@ import random
 import string
 from urllib.parse import quote
 
-from aiowebsocket.converses import AioWebSocket, SocketState, Converse, HandShake
+from aiowebsocket.converses import AioWebSocket, SocketState, Converse, HandShake, DataFrames
 from aiowebsocket.parts import parse_uri
 
 from ConfigParser import ConfigParser
@@ -27,6 +27,7 @@ class WSConnector:
         self.interval = self.interval()
         self.max_size = self.max_size()
         self.aws = None
+        self.processor = None
 
     def name(self):
         name = self.parser.get_parser()["Settings"]["name"]
@@ -90,10 +91,19 @@ class WSConnector:
             converse = self.aws.manipulator
             self.logger.info(url)
             processor = JobProcessor(interval=self.interval, max_size=self.max_size)
+            self.processor = processor
             tasks = [processor.pull_task(converse), processor.receive_task(converse), processor.process(converse),
                      processor.monitor()]
             # await converse.send(bytes("DDDhttp", encoding="utf-8"))
             await asyncio.gather(*tasks)
+
+    async def close(self):
+        self.logger.info("Shutting down, waiting for tasks to complete...")
+        self.logger.info("You may press Ctrl+C again to force quit")
+        if self.processor is not None:
+            await self.processor.close()
+        if self.aws is not None:
+            await self.aws.close_connection()
 
 
 class WS(AioWebSocket):
@@ -131,15 +141,15 @@ class WS(AioWebSocket):
             raise ConnectionError('SocketState is closed, can not close.')
         if self.state is SocketState.closing:
             self.logger.warning('SocketState is closing')
-        await self.converse.close(message=b'')
+        await self.converse.send(message=b'', closed=True)
 
 
 class NewConverse(Converse):
-    async def close(self, message,
-                    fin: bool = True, mask: bool = True):
+    async def send(self, message,
+                   fin: bool = True, mask: bool = True, closed: bool = False):
         """Send close message to server """
 
         if isinstance(message, str):
             message = message.encode()
-        code = 0x08
+        code = 0x08 if closed else DataFrames.text.value
         await self.frame.write(fin=fin, code=code, message=message, mask=mask)

@@ -16,10 +16,12 @@ class JobProcessor:
         self.logger = Logger(logger_name="job").get_logger()
         self.MAX_SIZE = max_size
         self.INTERVAL = interval / 1000.0
+        self.closed = False
+        self.client = None
 
     async def pull_task(self, websockets):
         while True:
-            if self.send_queue.qsize() < self.MAX_SIZE and self.queue.qsize() < self.MAX_SIZE:
+            if self.send_queue.qsize() < self.MAX_SIZE and self.queue.qsize() < self.MAX_SIZE and not self.closed:
                 await websockets.send(bytes("DDDhttp", encoding="utf-8"))
                 self.logger.debug("Send \"DDDhttp\"")
                 self.send_queue.put("DDDhttp", block=False)
@@ -46,6 +48,7 @@ class JobProcessor:
 
     async def process(self, websockets):
         async with aiohttp.ClientSession() as client:
+            self.client = client
             while True:
                 if not self.queue.empty():
                     text = self.queue.get(block=False)
@@ -65,6 +68,14 @@ class JobProcessor:
                     self.logger.debug("Processed a task and send back.")
                     self.logger.debug(result)
                 await asyncio.sleep(self.INTERVAL)
+
+    async def close(self):
+        self.closed = True
+        while True:
+            if self.client is not None and self.queue.empty() and self.send_queue.empty():
+                await self.client.close()
+                break
+            await asyncio.sleep(1)
 
     async def monitor(self):
         while True:
