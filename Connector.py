@@ -13,7 +13,7 @@ from Logger import Logger
 
 
 class Connector:
-    VERSION = "1.0.2"
+    VERSION = "1.0.3"
     DEFAULT_INTERVAL = 1000
     DEFAULT_SIZE = 10
     parser = ConfigParser()
@@ -77,6 +77,10 @@ class Connector:
         return self.DEFAULT_SIZE
 
     async def connect(self):
+        """Establish the websockets connection
+        Create the job processor
+        Check out the status of original connection
+        """
         url = "wss://cluster.vtbs.moe/?runtime={runtime}&version={version}&platform={platform}&uuid={uuid}&name={name}".format(
             runtime=self.runtime,
             version=self.VERSION,
@@ -98,6 +102,9 @@ class Connector:
             await asyncio.gather(*tasks)
 
     async def close(self):
+        """Close all connection
+        Including websockets and https
+        """
         self.logger.info("Shutting down, waiting for tasks to complete...")
         self.logger.info("You may press Ctrl+C again to force quit")
         if self.processor is not None:

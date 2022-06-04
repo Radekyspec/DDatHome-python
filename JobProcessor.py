@@ -10,7 +10,7 @@ from Logger import Logger
 
 
 class JobProcessor:
-    def __init__(self, interval=1000, max_size=10):
+    def __init__(self, interval, max_size):
         self.queue = queue.PriorityQueue()
         self.send_queue = queue.Queue()
         self.logger = Logger(logger_name="job").get_logger()
@@ -20,14 +20,21 @@ class JobProcessor:
         self.client = None
 
     async def pull_task(self, websockets):
-        while True:
-            if self.send_queue.qsize() < self.MAX_SIZE and self.queue.qsize() < self.MAX_SIZE and not self.closed:
+        """Pull a task from websockets server
+        Send string "DDDhttp" to server
+        It is able to pull another task before the last task finished
+        """
+        while not self.closed:
+            if self.send_queue.qsize() < self.MAX_SIZE and self.queue.qsize() < self.MAX_SIZE:
                 await websockets.send(bytes("DDDhttp", encoding="utf-8"))
                 self.logger.debug("Send \"DDDhttp\"")
                 self.send_queue.put("DDDhttp", block=False)
             await asyncio.sleep(self.INTERVAL)
 
     async def receive_task(self, websockets):
+        """Receive a task from websockets server
+        Check the type and put it into queue
+        """
         while True:
             receive_text = str(await websockets.receive(), encoding="utf-8")
             text = json.loads(receive_text)
@@ -47,6 +54,8 @@ class JobProcessor:
             return await resp.text(encoding="utf-8")
 
     async def process(self, websockets):
+        """Process http task and send back to server
+        """
         async with aiohttp.ClientSession() as client:
             self.client = client
             while True:
@@ -55,8 +64,10 @@ class JobProcessor:
                     key = text[1]
                     url = text[2]
                     try:
-                        async with timeout(10):
-                            resp = await self.fetch(client, url)
+                        with timeout(10):
+                            # resp = await self.fetch(client, url)
+                            resp = asyncio.create_task(self.fetch(client, url))
+                            resp = await resp
                     except asyncio.TimeoutError:
                         continue
                     result = {
@@ -65,11 +76,14 @@ class JobProcessor:
                     }
                     result = json.dumps(result, ensure_ascii=False)
                     await websockets.send(result)
-                    self.logger.debug("Processed a task and send back.")
+                    self.logger.debug("Proceeded a task and send back.")
                     self.logger.debug(result)
                 await asyncio.sleep(self.INTERVAL)
 
     async def close(self):
+        """Close connection pool
+        Stop pulling task from server
+        """
         self.closed = True
         while True:
             if self.client is not None and self.queue.empty() and self.send_queue.empty():
