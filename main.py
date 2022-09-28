@@ -3,7 +3,7 @@ import shutil
 
 from aiohttp.client_exceptions import ServerDisconnectedError
 
-from Logger import Logger
+from logger import Logger
 
 
 async def main(connector, w_logger):
@@ -16,10 +16,10 @@ async def main(connector, w_logger):
 
 if __name__ == '__main__':
     try:
-        from Connector import Connector
+        from connector import Connector
     except KeyboardInterrupt:
         exit(0)
-    loop = asyncio.get_event_loop()
+    loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
     logger = Logger(logger_name="start", level="DEBUG").get_logger()
     logger.info("D" * (shutil.get_terminal_size().columns - 34))
     logger.info("Thank you for participating DD@Home,")

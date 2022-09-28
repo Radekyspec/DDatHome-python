@@ -2,7 +2,7 @@ import configparser
 import os
 import time
 
-from Logger import Logger
+from logger import Logger
 
 
 class ConfigParser:
