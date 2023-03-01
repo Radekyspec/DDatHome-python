@@ -3,6 +3,16 @@ DD@Home in Python<br>
 
 [DDatHome-nodejs](https://github.com/dd-center/DDatHome-nodejs)的Python异步实现
 
+---
+
+## 1.1.0版本更新
+
+- 修复了一系列问题，项目结构有较大变化，建议重新克隆仓库，重新安装依赖
+
+- 支持弹幕服务器转发
+
+---
+
 ## 快速上手
 
 ### 所需环境
@@ -27,6 +37,8 @@ pip install -r requirements.txt
 ```shell
 python main.py
 ```
+
+---
 
 ## 配置文件
 

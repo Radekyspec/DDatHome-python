@@ -12,33 +12,31 @@ from logger import Logger
 
 
 class Connector:
-    VERSION: str = "1.0.4"
+    VERSION: str = "1.1.0"
     DEFAULT_INTERVAL: int = 1000
     DEFAULT_SIZE: int = 10
+    DEFAULT_LIMIT: int = 1000
     parser: ConfigParser = ConfigParser()
 
     def __init__(self):
         self.closed: bool = False
         self.runtime: str = "Python" + platform.python_version()
-        self.platform: str = "win64" if platform.architecture()[0] == "64bit" else "win32"
         self.logger = Logger(logger_name="ws").get_logger()
         self.aws = None
         self.processor = None
 
     @property
+    def platform(self) -> str:
+        return platform.system() + "_" + platform.architecture()[0]
+
+    @property
     def name(self) -> str:
-        name: str = self.parser.get_parser()["Settings"]["name"]
-        if name:
-            return name
-        name: str = "DD"
+        name: str = self.parser.get_parser().get("Settings", "name", fallback="DD")
         self.parser.save(option="name", content=name)
         return quote(name.encode("utf-8"))
 
     @property
     def uuid(self) -> str:
-        uuid: str = self.parser.get_parser()["Settings"]["uuid"]
-        if uuid:
-            return uuid
         digits: list[str] = [
             "".join(random.sample(string.hexdigits, 8)),
             "".join(random.sample(string.hexdigits, 4)),
@@ -47,41 +45,59 @@ class Connector:
             "".join(random.sample(string.hexdigits, 17))
         ]
         uuid: str = "-".join(digits).upper() + "infoc"
+        uuid: str = self.parser.get_parser().get("Settings", "uuid", fallback=uuid)
         self.parser.save(option="uuid", content=uuid)
         return uuid
 
     @property
     def interval(self) -> int:
-        interval: str = self.parser.get_parser()["Settings"]["interval"]
+        interval = self.parser.get_parser().get("Settings", "interval", fallback=self.DEFAULT_INTERVAL)
         try:
             interval: int = int(interval)
         except ValueError:
-            pass
+            self.parser.save(option="interval", content=str(self.DEFAULT_INTERVAL))
+            return self.DEFAULT_INTERVAL
         else:
             if interval > 0:
                 return interval
-        self.parser.save(option="interval", content=str(self.DEFAULT_INTERVAL))
-        return self.DEFAULT_INTERVAL
+            self.parser.save(option="interval", content=str(self.DEFAULT_INTERVAL))
+            return self.DEFAULT_INTERVAL
 
     @property
     def max_size(self) -> int:
-        max_size: str = self.parser.get_parser()["Settings"]["max_size"]
+        max_size: str = self.parser.get_parser().get("Settings", "max_size", fallback=self.DEFAULT_SIZE)
         try:
             max_size: int = int(max_size)
         except ValueError:
-            pass
+            self.parser.save(option="max_size", content=str(self.DEFAULT_SIZE))
+            return self.DEFAULT_SIZE
         else:
             if max_size > 0:
                 return max_size
-        self.parser.save(option="max_size", content=str(self.DEFAULT_SIZE))
-        return self.DEFAULT_SIZE
+            self.parser.save(option="max_size", content=str(self.DEFAULT_SIZE))
+            return self.DEFAULT_SIZE
+
+    @property
+    def ws_limit(self) -> int:
+        limit = self.parser.get_parser().get("Settings", "ws_limit", fallback=self.DEFAULT_LIMIT)
+        try:
+            limit = int(limit)
+        except ValueError:
+            self.parser.save(option="ws_limit", content=str(self.DEFAULT_LIMIT))
+            return self.DEFAULT_LIMIT
+        else:
+            if limit > 0:
+                return limit
+            self.parser.save(option="ws_limit", content=str(self.DEFAULT_LIMIT))
+            return self.DEFAULT_LIMIT
 
     async def connect(self) -> None:
         """Establish the websockets connection
         Create the job processor
         Check out the status of original connection
         """
-        url = "wss://cluster.vtbs.moe/?runtime={runtime}&version={version}&platform={platform}&uuid={uuid}&name={name}".format(
+        url = "wss://cluster.vtbs.moe/?runtime={runtime}&version={version}&platform={platform}&uuid={uuid}&name={name}"
+        url = url.format(
             runtime=self.runtime,
             version=self.VERSION,
             platform=self.platform,
@@ -91,18 +107,23 @@ class Connector:
         if self.aws is not None:
             await self.aws.close()
         reconnect = False
-        async for aws in websockets.connect(url):
+        async for self.aws in websockets.connect(url):
             if reconnect:
                 self.logger.info("重连成功")
                 reconnect = False
-            self.aws: websockets.WebSocketClientProtocol = aws
             self.logger.info(url)
-            self.processor: JobProcessor = JobProcessor(interval=self.interval, max_size=self.max_size)
+            self.processor = JobProcessor(
+                interval=self.interval,
+                max_size=self.max_size,
+                ws_limit=self.ws_limit,
+                websockets=self.aws,
+            )
             tasks = [
-                self.processor.pull_task(aws),
-                self.processor.receive_task(aws),
-                self.processor.process(aws),
-                self.processor.monitor()
+                self.processor.pull_task(),
+                self.processor.receive_task(),
+                self.processor.process(),
+                self.processor.monitor(),
+                self.processor.pull_ws()
             ]
             # await converse.send(bytes("DDDhttp", encoding="utf-8"))
             try:

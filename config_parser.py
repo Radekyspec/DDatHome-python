@@ -1,6 +1,5 @@
 import configparser
 import os
-import time
 
 from logger import Logger
 
@@ -38,17 +37,15 @@ class ConfigParser:
                 "interval": 1000,
                 "; 最大队列长度, 超出将不再获取新任务 | 选填, 默认10": None,
                 "max_size": 10,
+                "; 直播间连接数, 同时转发多少直播间 | 选填, 默认1000": None,
+                "ws_limit": 1000,
             }})
         self.parser.write(open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "config.ini"), "w"))
-        self.logger.info("Generated default config.ini file. Please quit and edit it then restart this program. ")
-        time.sleep(999999)
-        return
+        self.logger.info("Generated default config.ini file. Please edit it then restart this program. ")
+        exit(0)
 
     def has_section(self, section):
-        if self.parser.has_section(section):
-            return True
-        else:
-            return False
+        return self.parser.has_section(section)
 
     def save(self, section="Settings", option="", content=""):
         self.parser.clear()
@@ -56,7 +53,7 @@ class ConfigParser:
             self.parser.read(os.path.join(os.path.realpath(os.path.dirname(__file__)), "config.ini"), encoding="utf-8")
         except UnicodeDecodeError:
             self.parser.read(os.path.join(os.path.realpath(os.path.dirname(__file__)), "config.ini"), encoding="gbk")
-        if not self.parser.has_section(section):
+        if not self.has_section(section):
             self.parser[section] = {}
         self.parser[section][option] = content
         self.parser.write(

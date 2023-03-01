@@ -1,5 +1,6 @@
 import os
 from logging import getLogger, StreamHandler, FileHandler, Formatter, DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL
+from logging import Logger as DefaultLogger
 from time import strftime, localtime
 from typing import Optional
 
@@ -11,7 +12,7 @@ class Logger:
         self.name = logger_name
         self.set_logger()
 
-    def set_logger(self):
+    def set_logger(self) -> None:
         if self.level and self.level == "INFO":
             self.level = INFO
         elif self.level and self.level == "DEBUG":
@@ -40,7 +41,7 @@ class Logger:
             mode="a",
             encoding="utf-8",
         )
-        file_handler.setLevel(self.level)
+        file_handler.setLevel(DEBUG)
         formatter = Formatter(fmt="%(asctime)s - [%(levelname)s] %(message)s")
         stream_handler.setFormatter(formatter)
         file_handler.setFormatter(formatter)
@@ -49,5 +50,5 @@ class Logger:
         self.logger.addHandler(file_handler)
         return
 
-    def get_logger(self):
+    def get_logger(self) -> DefaultLogger:
         return self.logger
