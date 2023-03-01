@@ -8,7 +8,7 @@ from logger import Logger
 class WSLive(threading.Thread):
 
     def __init__(self):
-        super().__init__()
+        super().__init__(daemon=True)
         self.started = False
         self.logger = Logger(logger_name="bili-ws").get_logger()
         self.rooms = set()
