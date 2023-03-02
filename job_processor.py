@@ -4,7 +4,8 @@ import queue
 import time
 from typing import Any
 
-import aiohttp
+from aiohttp import ClientSession
+from aiohttp.client_exceptions import ClientError
 from async_timeout import timeout
 from random import random
 
@@ -22,19 +23,20 @@ class JobProcessor:
     def __init__(self,
                  interval: int,
                  max_size: int,
-                 ws_limit: int,
-                 websockets):
+                 ws_limit: int):
         self.INTERVAL: float = interval / 1000.0
         self.MAX_SIZE: int = max_size
         self.WS_LIMIT = ws_limit
-        self.websockets = websockets
+        self.websockets = None
         self.queue: queue.PriorityQueue = queue.PriorityQueue()
-        self.send_queue: queue.Queue = queue.Queue()
         self.logger: Any = Logger(
             logger_name="job").get_logger()
         self.closed: bool = False
         self.client: Any = None
         self.bili_ws = WSLive()
+
+    def set_websockets(self, websockets):
+        self.websockets = websockets
 
     async def pull_task(self) -> None:
         """Pull a task from websockets server
@@ -42,10 +44,9 @@ class JobProcessor:
         It is able to pull another task before the last task finished
         """
         while not self.closed:
-            if self.send_queue.qsize() < self.MAX_SIZE and self.queue.qsize() < self.MAX_SIZE:
+            if self.queue.qsize() < self.MAX_SIZE:
                 await self.websockets.send("DDDhttp")
                 self.logger.debug("Send \"DDDhttp\"")
-                self.send_queue.put("DDDhttp", block=False)
             await asyncio.sleep(self.INTERVAL)
 
     async def receive_task(self) -> None:
@@ -57,18 +58,9 @@ class JobProcessor:
             text: Any = json.loads(receive_text)
             self.logger.debug("Receive a task from server.")
             self.logger.debug(receive_text)
-            if "empty" in text:
-                try:
-                    self.send_queue.get(block=False)
-                except queue.Empty:
-                    pass
-            elif "data" in text:
+            if "data" in text:
                 task_type = text["data"].get("type", None)
                 if task_type == "http":
-                    try:
-                        self.send_queue.get(block=False)
-                    except queue.Empty:
-                        pass
                     self.queue.put(
                         (str(time.time_ns())[:14], text["key"], text["data"]["url"]), block=False)
                 elif task_type == "query":
@@ -87,7 +79,7 @@ class JobProcessor:
     async def process(self):
         """Process http task and send back to server
         """
-        async with aiohttp.ClientSession(headers=self._HEADERS) as self.client:
+        async with ClientSession(headers=self._HEADERS) as self.client:
             while True:
                 if self.queue.empty():
                     await asyncio.sleep(self.INTERVAL)
@@ -101,6 +93,8 @@ class JobProcessor:
                             self.fetch(self.client, url))
                         resp: str = await resp
                 except asyncio.TimeoutError:
+                    continue
+                except (OSError, ClientError):
                     continue
                 result: dict[str, str] = {
                     "key": key,
@@ -130,14 +124,17 @@ class JobProcessor:
         Stop pulling task from server
         """
         self.closed: bool = True
+        await self.bili_ws.close()
         while True:
-            if self.client is not None and self.queue.empty() and self.send_queue.empty():
+            if self.client is not None and self.queue.empty():
                 await self.client.close()
                 break
             await asyncio.sleep(1)
 
     async def monitor(self):
         while True:
-            await asyncio.sleep(600)
-            self.logger.debug(
-                "WS | HTTP: " + " | ".join([str(self.send_queue.qsize()), str(self.queue.qsize())]))
+            await asyncio.sleep(60)
+            self.logger.info(
+                "HTTP: " + str(self.queue.qsize()))
+            self.logger.info(f"OPEN: {len(self.bili_ws.rooms)} | LIVE: {len(self.bili_ws.lived)} | "
+                             f"LIMIT: {self.WS_LIMIT}")

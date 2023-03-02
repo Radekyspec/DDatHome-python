@@ -1,18 +1,8 @@
 import asyncio
 import shutil
 
-from aiohttp.client_exceptions import ServerDisconnectedError
-
 from connector import Connector
 from logger import Logger
-
-
-async def main(connector, w_logger):
-    try:
-        await connector.connect()
-    except (OSError, ConnectionError, ConnectionResetError, ConnectionRefusedError, ServerDisconnectedError):
-        w_logger.info("WS server disconnected. Reconnecting...")
-        await main(connector, w_logger)
 
 
 if __name__ == '__main__':
@@ -25,7 +15,7 @@ if __name__ == '__main__':
     logger.info("D" * (shutil.get_terminal_size().columns - 34))
     ws_connector = Connector()
     try:
-        loop.run_until_complete(main(ws_connector, logger))
+        loop.run_until_complete(ws_connector.connect())
     except KeyboardInterrupt:
         try:
             loop.run_until_complete(ws_connector.close())

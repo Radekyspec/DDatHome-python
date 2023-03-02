@@ -12,7 +12,7 @@ from logger import Logger
 
 
 class Connector:
-    VERSION: str = "1.1.0"
+    VERSION: str = "1.1.1"
     DEFAULT_INTERVAL: int = 1000
     DEFAULT_SIZE: int = 10
     DEFAULT_LIMIT: int = 1000
@@ -107,17 +107,17 @@ class Connector:
         if self.aws is not None:
             await self.aws.close()
         reconnect = False
+        self.processor = JobProcessor(
+            interval=self.interval,
+            max_size=self.max_size,
+            ws_limit=self.ws_limit
+        )
         async for self.aws in websockets.connect(url):
             if reconnect:
                 self.logger.info("重连成功")
                 reconnect = False
             self.logger.info(url)
-            self.processor = JobProcessor(
-                interval=self.interval,
-                max_size=self.max_size,
-                ws_limit=self.ws_limit,
-                websockets=self.aws,
-            )
+            self.processor.set_websockets(self.aws)
             tasks = [
                 self.processor.pull_task(),
                 self.processor.receive_task(),

@@ -59,7 +59,7 @@ class BiliDM:
                 await asyncio.gather(*tasks)
             except websockets.ConnectionClosed:
                 if not self.closed:
-                    self.logger.warning("[{room_id}]  Disconnected to danmaku server.".format(room_id=self.room_id))
+                    self.logger.debug("[{room_id}]  Reconnecting to danmaku server.".format(room_id=self.room_id))
                     continue
                 break
 

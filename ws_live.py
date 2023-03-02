@@ -6,12 +6,14 @@ from logger import Logger
 
 
 class WSLive(threading.Thread):
+    rooms: dict[int, BiliDM]
+    lived: set
 
     def __init__(self):
         super().__init__(daemon=True)
         self.started = False
         self.logger = Logger(logger_name="bili-ws").get_logger()
-        self.rooms = set()
+        self.rooms = {}
         self.lived = set()
         self.ws = None
 
@@ -25,15 +27,19 @@ class WSLive(threading.Thread):
 
     def watch(self, room_id):
         if room_id and room_id not in self.rooms:
-            self.rooms.add(room_id)
+            self.rooms.update({room_id: BiliDM(room_id, self.ws)})
             self.logger.debug(f"WATCH: {room_id}")
             self.add(room_id)
 
     def add(self, room_id: int):
         self.logger.debug(f"OPEN: {room_id}")
-        asyncio.run_coroutine_threadsafe(BiliDM(room_id, self.ws).startup(), asyncio.get_event_loop())
+        asyncio.run_coroutine_threadsafe(self.rooms[room_id].startup(), asyncio.get_event_loop())
         self.logger.debug(f"LIVE: {room_id}")
         self.lived.add(room_id)
+
+    async def close(self):
+        tasks = [self.rooms[room_id].stop() for room_id in self.rooms]
+        await asyncio.gather(*tasks)
 
     def run(self):
         try:
