@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from logging import getLogger, StreamHandler, FileHandler, Formatter, DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL
 from logging import Logger as DefaultLogger
