@@ -110,6 +110,7 @@ class JobProcessor:
     async def pull_ws(self):
         """Pull a live room ws task from server."""
         while not self.closed:
+            await asyncio.sleep(5)
             if len(self.bili_ws.rooms) == len(self.bili_ws.lived) and len(self.bili_ws.rooms) < self.WS_LIMIT:
                 key = str(random())
                 payload = {
@@ -119,7 +120,6 @@ class JobProcessor:
                 result = json.dumps(
                     payload, ensure_ascii=False, separators=(",", ":"))
                 await self.websockets.send(result)
-            await asyncio.sleep(5)
 
     async def close(self):
         """Close connection pool

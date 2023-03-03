@@ -23,7 +23,6 @@ class WSLive(threading.Thread):
 
     async def startup(self):
         self.started = True
-        await asyncio.sleep(.5)
         while True:
             await asyncio.sleep(0)
 
