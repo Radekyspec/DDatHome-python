@@ -16,12 +16,14 @@ class WSLive(threading.Thread):
         self.rooms = {}
         self.lived = set()
         self.ws = None
+        self.loop = None
 
     def set_ws(self, ws_client):
         self.ws = ws_client
 
     async def startup(self):
         self.started = True
+        await asyncio.sleep(.5)
         while True:
             await asyncio.sleep(0)
 
@@ -33,8 +35,8 @@ class WSLive(threading.Thread):
 
     def add(self, room_id: int):
         self.logger.debug(f"OPEN: {room_id}")
-        asyncio.run_coroutine_threadsafe(self.rooms[room_id].startup(), asyncio.get_event_loop())
-        self.logger.debug(f"LIVE: {room_id}")
+        asyncio.run_coroutine_threadsafe(
+            self.rooms[room_id].startup(), self.loop)
         self.lived.add(room_id)
 
     async def close(self):
@@ -44,6 +46,7 @@ class WSLive(threading.Thread):
     def run(self):
         try:
             asyncio.set_event_loop(asyncio.new_event_loop())
-            asyncio.get_event_loop().run_until_complete(self.startup())
+            self.loop = asyncio.get_event_loop()
+            self.loop.run_until_complete(self.startup())
         except KeyboardInterrupt:
             print("exit with keyboard")

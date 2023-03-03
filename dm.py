@@ -2,6 +2,8 @@ import asyncio
 import aiohttp
 import json
 import traceback
+import random
+import string
 
 import brotli
 import websockets
@@ -18,6 +20,18 @@ class BiliDM:
         self.wss_url = "wss://broadcastlv.chat.bilibili.com/sub"
         self.closed = False
 
+    @property
+    def _uuid(self):
+        digits: list[str] = [
+            "".join(random.sample(string.hexdigits, 8)),
+            "".join(random.sample(string.hexdigits, 4)),
+            "".join(random.sample(string.hexdigits, 4)),
+            "".join(random.sample(string.hexdigits, 4)),
+            "".join(random.sample(string.hexdigits, 17))
+        ]
+        uuid: str = "-".join(digits).upper() + "infoc"
+        return uuid
+
     async def get_key(self):
         url = "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo"
         payload = {
@@ -25,7 +39,7 @@ class BiliDM:
             "type": 0,
         }
         headers = {
-            "cookie": "buvid3=bili",
+            "cookie": f"buvid3={self._uuid}",
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                           "Chrome/102.0.0.0 Safari/537.36",
         }
@@ -50,16 +64,28 @@ class BiliDM:
         header_op = "001000010000000700000001"
         header_len = ("0" * (8 - len(hex(len(payload) + 16)[2:])) + hex(len(payload) + 16)[2:]) if len(
             hex(len(payload) + 16)[2:]) <= 8 else ...
-        header = header_len + header_op + bytes(str(payload), encoding="utf-8").hex()
-        async for self.bili_ws in websockets.connect(self.wss_url):
+        header = header_len + header_op + \
+                 bytes(str(payload), encoding="utf-8").hex()
+        headers = {
+            "cookie": f"buvid3={self._uuid}",
+            "origin": "https://live.bilibili.com",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/102.0.0.0 Safari/537.36",
+        }
+        async for self.bili_ws in websockets.connect(self.wss_url,
+                                                     extra_headers=headers,
+                                                     open_timeout=None):
             await self.bili_ws.send(bytes.fromhex(header))
-            self.logger.debug("[{room_id}]  Connected to danmaku server.".format(room_id=self.room_id))
-            tasks = [self.heart_beat(self.bili_ws), self.receive_dm(self.bili_ws)]
+            self.logger.debug(
+                "[{room_id}]  Connected to danmaku server.".format(room_id=self.room_id))
+            tasks = [self.heart_beat(self.bili_ws),
+                     self.receive_dm(self.bili_ws)]
             try:
                 await asyncio.gather(*tasks)
             except websockets.ConnectionClosed:
                 if not self.closed:
-                    self.logger.debug("[{room_id}]  Reconnecting to danmaku server.".format(room_id=self.room_id))
+                    self.logger.debug(
+                        "[{room_id}]  Reconnecting to danmaku server.".format(room_id=self.room_id))
                     continue
                 break
 
@@ -69,7 +95,8 @@ class BiliDM:
         while True:
             await asyncio.sleep(60)
             await ws.send(bytes.fromhex(hb))
-            self.logger.debug("[{room_id}][HEARTBEAT]  Send HeartBeat.".format(room_id=self.room_id))
+            self.logger.debug(
+                "[{room_id}][HEARTBEAT]  Send HeartBeat.".format(room_id=self.room_id))
 
     async def receive_dm(self, ws):
         while True:
@@ -77,6 +104,10 @@ class BiliDM:
             if receive_text:
                 await self.process_dm(receive_text)
             await asyncio.sleep(0.1)
+
+    @staticmethod
+    def _dumps(data):
+        return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
 
     async def process_dm(self, data, is_decompressed=False):
         # 获取数据包的长度，版本和操作类型
@@ -117,8 +148,28 @@ class BiliDM:
         if op == 5:
             try:
                 jd = json.loads(data[16:].decode('utf-8', errors='ignore'))
-                if jd["cmd"] == "LIVE":
-                    await self.ws.send(json.dumps(
+                if jd["cmd"].startswith("DANMU_MSG"):
+                    info = jd["info"]
+                    if not info[0][9]:
+                        mid = info[2][0]
+                        timestamp = info[0][4]
+                        await self.ws.send(self._dumps(
+                            {
+                                "relay": {
+                                    "roomid": self.room_id,
+                                    "e": "DANMU_MSG",
+                                    "data": {
+                                        "message": info[1],
+                                        "uname": info[2][1],
+                                        "timestamp": timestamp,
+                                        "mid": mid,
+                                    },
+                                    "token": f"{self.room_id}_DANMU_MSG_{mid}_{timestamp}"
+                                }
+                            }
+                        ))
+                elif jd["cmd"] == "LIVE":
+                    await self.ws.send(self._dumps(
                         {
                             "relay": {
                                 "roomid": self.room_id,
@@ -127,11 +178,61 @@ class BiliDM:
                         }
                     ))
                 elif jd["cmd"] == "PREPARING":
-                    await self.ws.send(json.dumps(
+                    await self.ws.send(self._dumps(
                         {
                             "relay": {
                                 "roomid": self.room_id,
                                 "e": "PREPARING"
+                            }
+                        }
+                    ))
+                elif jd["cmd"] == "ROUND":
+                    await self.ws.send(self._dumps(
+                        {
+                            "relay": {
+                                "roomid": self.room_id,
+                                "e": "ROUND"
+                            }
+                        }
+                    ))
+                elif jd["cmd"] == "SEND_GIFT":
+                    data = jd["data"]
+                    mid = data["uid"]
+                    tid = data["tid"]
+                    await self.ws.send(self._dumps(
+                        {
+                            "relay": {
+                                "roomid": self.room_id,
+                                "e": "SEND_GIFT",
+                                "data": {
+                                    "coinType": data["coin_type"],
+                                    "giftId": data["giftId"],
+                                    "totalCoin": data["total_coin"],
+                                    "uname": data["uname"],
+                                    "mid": mid
+                                },
+                                "token": f"{self.room_id}_SEND_GIFT_{mid}_{tid}"
+                            }
+                        }
+                    ))
+                elif jd["cmd"] == "GUARD_BUY":
+                    data = jd["data"]
+                    mid = data["uid"]
+                    start_time = data["start_time"]
+                    await self.ws.send(self._dumps(
+                        {
+                            "relay": {
+                                "roomid": self.room_id,
+                                "e": "GUARD_BUY",
+                                "data": {
+                                    "mid": mid,
+                                    "uname": data["username"],
+                                    "num": data["num"],
+                                    "price": data["price"],
+                                    "giftId": data["gift_id"],
+                                    "level": data["guard_level"]
+                                },
+                                "token": f"{self.room_id}_GUARD_BUY_{mid}_{start_time}"
                             }
                         }
                     ))

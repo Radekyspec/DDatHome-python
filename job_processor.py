@@ -100,7 +100,8 @@ class JobProcessor:
                     "key": key,
                     "data": resp,
                 }
-                result: str = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
+                result: str = json.dumps(
+                    result, ensure_ascii=False, separators=(",", ":"))
                 await self.websockets.send(result)
                 self.logger.debug("Proceeded a task and send back.")
                 self.logger.debug(result)
@@ -115,7 +116,8 @@ class JobProcessor:
                     "key": key,
                     "query": {"type": "pickRoom"}
                 }
-                result = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+                result = json.dumps(
+                    payload, ensure_ascii=False, separators=(",", ":"))
                 await self.websockets.send(result)
             await asyncio.sleep(5)
 
@@ -124,7 +126,6 @@ class JobProcessor:
         Stop pulling task from server
         """
         self.closed: bool = True
-        await self.bili_ws.close()
         while True:
             if self.client is not None and self.queue.empty():
                 await self.client.close()
