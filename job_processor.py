@@ -35,7 +35,7 @@ class JobProcessor:
             logger_name="job").get_logger()
         self.closed: bool = False
         self.client: Any = None
-        self.bili_ws = WSLive()
+        self.bili_ws = WSLive(self.WS_LIMIT)
 
     def set_websockets(self, websockets):
         self.websockets = websockets

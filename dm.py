@@ -96,6 +96,8 @@ class BiliDM(threading.Thread):
                         "[{room_id}]  Reconnecting to danmaku server.".format(room_id=self.room_id))
                     continue
                 break
+            except RuntimeError:
+                pass
 
     async def heart_beat(self, ws):
         # [object Object]
