@@ -37,7 +37,7 @@ class JobProcessor:
         self.client: Any = None
         self.bili_ws = WSLive(self.WS_LIMIT)
 
-    def set_websockets(self, websockets):
+    def set_ws(self, websockets):
         self.websockets = websockets
         self.bili_ws.set_ws(websockets)
         if not self.bili_ws.started:
@@ -113,7 +113,7 @@ class JobProcessor:
         """Pull a live room ws task from server."""
         while not self.closed:
             await asyncio.sleep(5)
-            if len(self.bili_ws.rooms) == len(self.bili_ws.lived) and len(self.bili_ws.rooms) < self.WS_LIMIT:
+            if self.bili_ws.rooms == len(self.bili_ws.lived) and self.bili_ws.rooms < self.WS_LIMIT:
                 key = str(random())
                 payload = {
                     "key": key,
@@ -128,7 +128,7 @@ class JobProcessor:
         Stop pulling task from server
         """
         self.closed: bool = True
-        await self.bili_ws.close()
+        self.bili_ws.close()
         while True:
             if self.client is not None and self.queue.empty():
                 await self.client.close()
@@ -140,7 +140,7 @@ class JobProcessor:
             await asyncio.sleep(60)
             self.logger.info(
                 "HTTP: " + str(self.queue.qsize()))
-            self.logger.info(f"OPEN: {len(self.bili_ws.rooms)} | LIVE: {len(self.bili_ws.lived)} | "
+            self.logger.info(f"OPEN: {str(self.bili_ws.rooms)} | LIVE: {len(self.bili_ws.lived)} | "
                              f"LIMIT: {self.WS_LIMIT}")
 
     @staticmethod

@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import aiohttp
 import json
-import threading
 import traceback
 import random
 import string
@@ -14,9 +13,8 @@ import websockets
 from logger import Logger
 
 
-class BiliDM(threading.Thread):
+class BiliDM:
     def __init__(self, room_id, ws):
-        super().__init__(name=f"Room-{room_id}", daemon=True)
         self.ws = ws
         self.bili_ws = None
         self.room_id = str(room_id)
@@ -248,13 +246,6 @@ class BiliDM(threading.Thread):
                     ))
             except Exception:
                 self.logger.error(traceback.format_exc())
-
-    def run(self) -> None:
-        try:
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            asyncio.get_event_loop().run_until_complete(self.startup())
-        except KeyboardInterrupt:
-            print("exit with keyboard")
 
     async def stop(self):
         self.closed = True

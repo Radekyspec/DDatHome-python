@@ -127,7 +127,7 @@ class Connector:
                 self.logger.info("重连成功")
                 reconnect = False
             self.logger.info(url)
-            self.processor.set_websockets(self.aws)
+            self.processor.set_ws(self.aws)
             tasks = [
                 asyncio.create_task(self.processor.pull_task()),
                 asyncio.create_task(self.processor.receive_task()),
