@@ -37,6 +37,9 @@ class JobProcessor:
 
     def set_websockets(self, websockets):
         self.websockets = websockets
+        self.bili_ws.set_ws(websockets)
+        if not self.bili_ws.started:
+            self.bili_ws.start()
 
     async def pull_task(self) -> None:
         """Pull a task from websockets server
@@ -65,11 +68,8 @@ class JobProcessor:
                         (str(time.time_ns())[:14], text["key"], text["data"]["url"]), block=False)
                 elif task_type == "query":
                     result = text["data"].get("result", None)
-                    if not self.bili_ws.started:
-                        self.logger.debug("Starting WSLive...")
-                        self.bili_ws.set_ws(self.websockets)
-                        self.bili_ws.start()
-                    self.bili_ws.watch(result)
+                    if self.bili_ws.started:
+                        self.bili_ws.watch(result)
 
     @staticmethod
     async def fetch(client, url):
@@ -126,6 +126,7 @@ class JobProcessor:
         Stop pulling task from server
         """
         self.closed: bool = True
+        await self.bili_ws.close()
         while True:
             if self.client is not None and self.queue.empty():
                 await self.client.close()
@@ -139,3 +140,10 @@ class JobProcessor:
                 "HTTP: " + str(self.queue.qsize()))
             self.logger.info(f"OPEN: {len(self.bili_ws.rooms)} | LIVE: {len(self.bili_ws.lived)} | "
                              f"LIMIT: {self.WS_LIMIT}")
+
+    @staticmethod
+    async def test_crash():
+        await asyncio.sleep(10)
+        import websockets
+
+        raise websockets.ConnectionClosed(None, None)

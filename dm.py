@@ -1,6 +1,7 @@
 import asyncio
 import aiohttp
 import json
+import threading
 import traceback
 import random
 import string
@@ -11,14 +12,18 @@ import websockets
 from logger import Logger
 
 
-class BiliDM:
+class BiliDM(threading.Thread):
     def __init__(self, room_id, ws):
+        super().__init__(name=f"Room-{room_id}", daemon=True)
         self.ws = ws
         self.bili_ws = None
         self.room_id = str(room_id)
         self.logger = Logger(logger_name="live-ws").get_logger()
         self.wss_url = "wss://broadcastlv.chat.bilibili.com/sub"
         self.closed = False
+
+    def set_ws(self, ws_client):
+        self.ws = ws_client
 
     @property
     def _uuid(self):
@@ -78,11 +83,12 @@ class BiliDM:
             await self.bili_ws.send(bytes.fromhex(header))
             self.logger.debug(
                 "[{room_id}]  Connected to danmaku server.".format(room_id=self.room_id))
-            tasks = [self.heart_beat(self.bili_ws),
-                     self.receive_dm(self.bili_ws)]
+            tasks = [asyncio.create_task(self.heart_beat(self.bili_ws)),
+                     asyncio.create_task(self.receive_dm(self.bili_ws))]
             try:
                 await asyncio.gather(*tasks)
             except websockets.ConnectionClosed:
+                [task.cancel() for task in tasks]
                 if not self.closed:
                     self.logger.debug(
                         "[{room_id}]  Reconnecting to danmaku server.".format(room_id=self.room_id))
@@ -92,14 +98,14 @@ class BiliDM:
     async def heart_beat(self, ws):
         # [object Object]
         hb = "0000001f0010000100000002000000015b6f626a656374204f626a6563745d"
-        while True:
+        while not self.closed:
             await asyncio.sleep(60)
             await ws.send(bytes.fromhex(hb))
             self.logger.debug(
                 "[{room_id}][HEARTBEAT]  Send HeartBeat.".format(room_id=self.room_id))
 
     async def receive_dm(self, ws):
-        while True:
+        while not self.closed:
             receive_text = await ws.recv()
             if receive_text:
                 await self.process_dm(receive_text)
@@ -238,6 +244,13 @@ class BiliDM:
                     ))
             except Exception:
                 self.logger.error(traceback.format_exc())
+
+    def run(self) -> None:
+        try:
+            asyncio.set_event_loop(asyncio.new_event_loop())
+            asyncio.get_event_loop().run_until_complete(self.startup())
+        except KeyboardInterrupt:
+            print("exit with keyboard")
 
     async def stop(self):
         self.closed = True
