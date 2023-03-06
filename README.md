@@ -13,6 +13,28 @@ DD@Home in Python<br>
 
 ---
 
+## 如何更新
+
+1. 进入项目目录
+
+```sh
+$ cd DDatHome-python
+```
+
+2. 拉取最新代码
+
+```sh
+$ git pull
+```
+
+3. 更新依赖库
+
+```sh
+$ pip install -r requirements.txt
+```
+
+---
+
 ## 快速上手
 
 ### 所需环境
@@ -22,20 +44,21 @@ DD@Home in Python<br>
 ### 克隆仓库
 
 ```sh
-git clone https://github.com/Radekyspec/DDatHome-python.git
-cd DDatHome-python
+$ git clone https://github.com/Radekyspec/DDatHome-python.git
+
+$ cd DDatHome-python
 ```
 
 ### 安装依赖
 
 ```shell
-pip install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 
 ### 运行
 
 ```shell
-python main.py
+$ python main.py
 ```
 
 ---
@@ -46,7 +69,7 @@ python main.py
 
 ### 结构详解
 
-```
+```script
 [Settings]
 ; UUID | 选填, 留空为随机生成, 用于记录状态
 uuid =
