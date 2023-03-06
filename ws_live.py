@@ -11,6 +11,7 @@ from logger import Logger
 class WSLive(threading.Thread):
     rooms: int
     lived: set
+    _max_sleep: int
 
     def __init__(self, ws_limit: int):
         super().__init__(name="WSLive", daemon=True)
@@ -19,6 +20,7 @@ class WSLive(threading.Thread):
         self.managers = set()
         self.rooms = 0
         self.lived = set()
+        self._max_sleep = 4_294_967
         self.pool = ThreadPoolExecutor(max_workers=ws_limit)
         self.ws = None
         self.current_loop = None
@@ -30,7 +32,7 @@ class WSLive(threading.Thread):
     def startup(self):
         self.started = True
         while self.started:
-            time.sleep(.1)
+            time.sleep(self._max_sleep)
 
     def watch(self, room_id):
         if not room_id or room_id in self.lived:

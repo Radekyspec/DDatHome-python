@@ -87,7 +87,7 @@ class JobProcessor:
                     await asyncio.sleep(self.INTERVAL)
                     continue
                 text: tuple = self.queue.get(block=False)
-                _, key, url = text
+                key, url = text[1:]
                 try:
                     with timeout(10):
                         # resp = await self.fetch(client, url)

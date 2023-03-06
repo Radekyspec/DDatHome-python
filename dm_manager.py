@@ -13,12 +13,14 @@ class DManager(threading.Thread):
     _LIMIT: int
     _rooms: set[BiliDM]
     _started: bool
+    _max_sleep: int
 
     def __init__(self, index: int, size_limit: int = 20) -> None:
         super().__init__(name=f"DManager-{str(index)}", daemon=True)
         self._size = 0
         self._LIMIT = size_limit
         self._rooms = set()
+        self._max_sleep = 4_294_967
         self._started = False
 
     def set_ws(self, ws_client) -> None:
@@ -36,11 +38,11 @@ class DManager(threading.Thread):
     async def startup(self) -> None:
         self._started = True
         while self._started:
-            await asyncio.sleep(.1)
+            await asyncio.sleep(self._max_sleep)
 
     def run(self) -> None:
         try:
             asyncio.set_event_loop(asyncio.new_event_loop())
-            asyncio.get_event_loop().run_until_complete(self.startup())
+            asyncio.get_running_loop().run_until_complete(self.startup())
         except KeyboardInterrupt:
             print("exit with keyboard")
