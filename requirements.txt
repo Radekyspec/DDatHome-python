@@ -1,3 +1,6 @@
 aiohttp==3.8.1
 brotlipy==0.7.0
 websockets==10.1
+nuitka
+ordered-set
+zstandard

@@ -25,4 +25,12 @@ if __name__ == '__main__':
             pass
         exit(0)
     except Exception as e:
+        import platform
+
         logger.exception(e)
+        logger.critical("发生未知错误, 请重启程序")
+        if platform.system() == "Windows":
+            try:
+                input()
+            except KeyboardInterrupt:
+                pass

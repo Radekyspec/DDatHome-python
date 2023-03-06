@@ -44,6 +44,10 @@ class ConfigParser:
             }})
         self.parser.write(open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "config.ini"), "w"))
         self.logger.info("Generated default config.ini file. Please edit it then restart this program. ")
+        import platform
+
+        if platform.system() == "Windows":
+            input()
         exit(0)
 
     def has_section(self, section):
