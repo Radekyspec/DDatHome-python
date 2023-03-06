@@ -39,7 +39,7 @@ class ConfigParser:
                 "interval": 1000,
                 "; 最大队列长度, 超出将不再获取新任务 | 选填, 默认10": None,
                 "max_size": 10,
-                "; 直播间连接数, 同时转发多少直播间 | 选填, 默认1000": None,
+                "; 直播服务器连接数, 同时转发多少直播间 | 选填, 默认1000": None,
                 "ws_limit": 1000,
             }})
         self.parser.write(open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "config.ini"), "w"))

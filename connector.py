@@ -94,7 +94,7 @@ class Connector:
             self.parser.save(option="ws_limit", content=str(self.DEFAULT_LIMIT))
             return self.DEFAULT_LIMIT
         else:
-            if limit > 0:
+            if limit >= 0:
                 self.parser.save(option="ws_limit", content=str(limit))
                 return limit
             self.parser.save(option="ws_limit", content=str(self.DEFAULT_LIMIT))
