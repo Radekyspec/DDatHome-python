@@ -140,7 +140,7 @@ class BiliDM:
             attention = int(data[16:].hex(), 16)
             self.logger.debug(
                 "[{room_id}][ATTENTION]  {attention}".format(room_id=self.room_id, attention=attention))
-            await self.ws.send(json.dumps(
+            await self.ws.send(self._dumps(
                 {
                     "relay": {
                         "roomid": self.room_id,
