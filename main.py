@@ -6,8 +6,11 @@ import shutil
 from connector import Connector
 from logger import Logger
 
+global logger
+
 
 async def start():
+    global logger
     loop = asyncio.get_event_loop()
     logger = Logger(logger_name="start", level="DEBUG").get_logger()
     logger.info("D" * (shutil.get_terminal_size().columns - 34))
@@ -16,13 +19,13 @@ async def start():
     logger.info("Edit config.ini to modify your settings.")
     logger.info("D" * (shutil.get_terminal_size().columns - 34))
     ws_connector = Connector()
+    await loop.create_task(ws_connector.connect())
+
+
+if __name__ == '__main__':
     try:
-        loop.run_until_complete(ws_connector.connect())
+        asyncio.run(start())
     except KeyboardInterrupt:
-        try:
-            loop.run_until_complete(ws_connector.close())
-        except KeyboardInterrupt:
-            pass
         exit(0)
     except Exception as e:
         import platform
@@ -34,7 +37,3 @@ async def start():
                 input()
             except KeyboardInterrupt:
                 pass
-
-
-if __name__ == '__main__':
-    asyncio.run(start())
