@@ -7,7 +7,7 @@ from connector import Connector
 from logger import Logger
 
 
-if __name__ == '__main__':
+async def start():
     loop = asyncio.get_event_loop()
     logger = Logger(logger_name="start", level="DEBUG").get_logger()
     logger.info("D" * (shutil.get_terminal_size().columns - 34))
@@ -34,3 +34,7 @@ if __name__ == '__main__':
                 input()
             except KeyboardInterrupt:
                 pass
+
+
+if __name__ == '__main__':
+    asyncio.run(start())
