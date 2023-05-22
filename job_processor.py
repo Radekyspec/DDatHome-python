@@ -35,7 +35,7 @@ class JobProcessor:
         self.websockets = None
         self.queue: queue.PriorityQueue = queue.PriorityQueue()
         self.logger: Any = Logger(
-            logger_name="job", level="DEBUG").get_logger()
+            logger_name="job").get_logger()
         self.closed: bool = False
         self.client: Any = None
         self.bili_ws = WSLive(self.WS_LIMIT)
