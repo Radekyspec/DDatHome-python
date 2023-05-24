@@ -12,7 +12,7 @@ from aiohttp.client_exceptions import ClientError
 from async_timeout import timeout
 from functools import reduce
 from random import random
-from urllib.parse import urlencode, urlsplit, parse_qsl
+from urllib.parse import quote, urlencode, urlsplit, parse_qsl
 
 from logger import Logger
 from ws_live import WSLive
@@ -117,10 +117,10 @@ class JobProcessor:
             await asyncio.sleep(300)
 
     async def enc_wbi(self, params: dict):
-        params = {new_key: params[new_key] for new_key in sorted(params.keys())}
         wts = int(time.time())
         params["wts"] = wts
-        query = urlencode(query=params, encoding="utf-8")
+        params = {new_key: params[new_key] for new_key in sorted(params.keys())}
+        query = quote(urlencode(query=params, encoding="utf-8"))
         w_rid = hashlib.md5((query + self._mixin).encode(encoding='utf-8')).hexdigest()
         return w_rid, wts
 
