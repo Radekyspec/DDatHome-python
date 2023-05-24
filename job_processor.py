@@ -12,7 +12,7 @@ from aiohttp.client_exceptions import ClientError
 from async_timeout import timeout
 from functools import reduce
 from random import random
-from urllib.parse import quote, urlencode, urlsplit, parse_qsl
+from urllib.parse import urlencode, urlsplit, parse_qsl
 
 from logger import Logger
 from ws_live import WSLive
@@ -112,6 +112,7 @@ class JobProcessor:
             self._img = img_url.split("/")[-1].split(".")[0]
             self._sub = sub_url.split("/")[-1].split(".")[0]
             self._mixin = self.get_mixin_key(self._img + self._sub)
+            self.logger.debug(f"Update mixin key: {self._mixin}")
             if not self.ready:
                 self.ready = True
             await asyncio.sleep(300)
@@ -120,7 +121,7 @@ class JobProcessor:
         wts = int(time.time())
         params["wts"] = wts
         params = {new_key: params[new_key] for new_key in sorted(params.keys())}
-        query = quote(urlencode(query=params, encoding="utf-8"))
+        query = urlencode(query=params, encoding="utf-8")
         w_rid = hashlib.md5((query + self._mixin).encode(encoding='utf-8')).hexdigest()
         return w_rid, wts
 
@@ -140,7 +141,6 @@ class JobProcessor:
                         url_split = urlsplit(url)
                         if "wbi" in str(url_split.path):
                             query = dict(parse_qsl(urlsplit(url).query))
-                            query = {new_key: query[new_key] for new_key in sorted(query.keys())}
                             w_rid, wts = await self.enc_wbi(query.copy())
                             query.update({
                                 "w_rid": w_rid,
