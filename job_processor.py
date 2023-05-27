@@ -138,16 +138,16 @@ class JobProcessor:
                 try:
                     with timeout(10):
                         # resp = await self.fetch(client, url)
-                        url_split = urlsplit(url)
-                        if "wbi" in str(url_split.path):
-                            query = dict(parse_qsl(urlsplit(url).query))
-                            w_rid, wts = await self.enc_wbi(query.copy())
-                            query.update({
-                                "w_rid": w_rid,
-                                "wts": wts
-                            })
-                            url = "".join([url.split("?")[0], "?", urlencode(query, encoding="utf-8")])
-                            self.logger.debug(f"New url: {url}")
+                        # url_split = urlsplit(url)
+                        # if "wbi" in str(url_split.path):
+                        #     query = dict(parse_qsl(url_split.query))
+                        #     w_rid, wts = await self.enc_wbi(query.copy())
+                        #     query.update({
+                        #         "w_rid": w_rid,
+                        #         "wts": wts
+                        #     })
+                        #     url = "".join([url.split("?")[0], "?", urlencode(query, encoding="utf-8")])
+                        #     self.logger.debug(f"New url: {url}")
                         resp: asyncio.Task = asyncio.create_task(
                             self.fetch(self.client, url))
                         resp: str = await resp
