@@ -20,9 +20,8 @@ from ws_live import WSLive
 
 class JobProcessor:
     _HEADERS = {
-        "cookie": "buvid3=bili",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/102.0.0.0 Safari/537.36",
+        "cookie": "_uuid=; rpdid=; buvid3=1DF2C10A-0124-4B27-AEA3-3D7961AF671151DDinfoc",
+        "user-agent": "Mozilla/5.0",
     }
     _img: str
     _sub: str
