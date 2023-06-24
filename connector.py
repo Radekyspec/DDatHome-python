@@ -4,6 +4,7 @@ import asyncio
 import platform
 import random
 import string
+from socket import AF_INET, AF_INET6
 from urllib.parse import quote
 
 import websockets
@@ -18,9 +19,9 @@ class Connector:
     DEFAULT_INTERVAL: int = 1000
     DEFAULT_SIZE: int = 10
     DEFAULT_LIMIT: int = 1000
-    parser: ConfigParser = ConfigParser()
 
     def __init__(self):
+        self.parser: ConfigParser = ConfigParser()
         self.closed: bool = False
         self.runtime: str = "Python" + platform.python_version()
         self.logger = Logger(logger_name="ws").get_logger()
@@ -36,7 +37,7 @@ class Connector:
         name: str = self.parser.get_parser().get("Settings", "name", fallback="DD")
         if not name:
             name = "DD"
-        self.parser.save(option="name", content=name)
+        self.parser.save(section="Settings", option="name", content=name)
         return quote(name.encode("utf-8"))
 
     @property
@@ -52,7 +53,7 @@ class Connector:
         uuid: str = self.parser.get_parser().get("Settings", "uuid", fallback=default_uuid)
         if not uuid:
             uuid = default_uuid
-        self.parser.save(option="uuid", content=uuid)
+        self.parser.save(section="Settings", option="uuid", content=uuid)
         return uuid
 
     @property
@@ -61,13 +62,13 @@ class Connector:
         try:
             interval: int = int(interval)
         except ValueError:
-            self.parser.save(option="interval", content=str(self.DEFAULT_INTERVAL))
+            self.parser.save(section="Settings", option="interval", content=str(self.DEFAULT_INTERVAL))
             return self.DEFAULT_INTERVAL
         else:
             if interval > 0:
-                self.parser.save(option="interval", content=str(interval))
+                self.parser.save(section="Settings", option="interval", content=str(interval))
                 return interval
-            self.parser.save(option="interval", content=str(self.DEFAULT_INTERVAL))
+            self.parser.save(section="Settings", option="interval", content=str(self.DEFAULT_INTERVAL))
             return self.DEFAULT_INTERVAL
 
     @property
@@ -76,13 +77,13 @@ class Connector:
         try:
             max_size: int = int(max_size)
         except ValueError:
-            self.parser.save(option="max_size", content=str(self.DEFAULT_SIZE))
+            self.parser.save(section="Settings", option="max_size", content=str(self.DEFAULT_SIZE))
             return self.DEFAULT_SIZE
         else:
             if max_size > 0:
-                self.parser.save(option="max_size", content=str(max_size))
+                self.parser.save(section="Settings", option="max_size", content=str(max_size))
                 return max_size
-            self.parser.save(option="max_size", content=str(self.DEFAULT_SIZE))
+            self.parser.save(section="Settings", option="max_size", content=str(self.DEFAULT_SIZE))
             return self.DEFAULT_SIZE
 
     @property
@@ -91,14 +92,28 @@ class Connector:
         try:
             limit = int(limit)
         except ValueError:
-            self.parser.save(option="ws_limit", content=str(self.DEFAULT_LIMIT))
+            self.parser.save(section="Settings", option="ws_limit", content=str(self.DEFAULT_LIMIT))
             return self.DEFAULT_LIMIT
         else:
             if limit >= 0:
-                self.parser.save(option="ws_limit", content=str(limit))
+                self.parser.save(section="Settings", option="ws_limit", content=str(limit))
                 return limit
-            self.parser.save(option="ws_limit", content=str(self.DEFAULT_LIMIT))
+            self.parser.save(section="Settings", option="ws_limit", content=str(self.DEFAULT_LIMIT))
             return self.DEFAULT_LIMIT
+
+    @property
+    def network(self) -> int:
+        net = self.parser.get_parser().get("Network", "ip", fallback="both")
+        if net not in ("ipv4", "ipv6", "both"):
+            self.parser.save(section="Network", option="ip", content="both")
+            return 0
+        if net == "ipv4":
+            return AF_INET
+        elif net == "ipv6":
+            return AF_INET6
+        else:
+            self.parser.save(section="Network", option="ip", content="both")
+            return 0
 
     async def connect(self) -> None:
         """Establish the websockets connection
@@ -120,7 +135,8 @@ class Connector:
         self.processor = JobProcessor(
             interval=self.interval,
             max_size=self.max_size,
-            ws_limit=self.ws_limit
+            ws_limit=self.ws_limit,
+            network=self.network
         )
         async for self.aws in websockets.connect(url):
             if reconnect:

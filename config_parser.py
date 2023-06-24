@@ -41,7 +41,12 @@ class ConfigParser:
                 "max_size": 10,
                 "; 直播服务器连接数, 同时转发多少直播间 | 选填, 默认1000": None,
                 "ws_limit": 1000,
-            }})
+            },
+            "Network": {
+                "; ipv4/ipv6/both": None,
+                "ip": "both",
+            }
+        })
         self.parser.write(open("config.ini", "w"))
         self.logger.info("Generated default config.ini file. Please edit it then restart this program. ")
         import platform
@@ -53,7 +58,7 @@ class ConfigParser:
     def has_section(self, section):
         return self.parser.has_section(section)
 
-    def save(self, section="Settings", option="", content=""):
+    def save(self, section, option, content):
         self.parser.clear()
         try:
             self.parser.read("config.ini", encoding="utf-8")

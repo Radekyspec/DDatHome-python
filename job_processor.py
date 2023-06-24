@@ -7,12 +7,12 @@ import queue
 import time
 from typing import Any
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, TCPConnector
 from aiohttp.client_exceptions import ClientError
 from async_timeout import timeout
 from functools import reduce
 from random import random
-from urllib.parse import urlencode, urlsplit, parse_qsl
+from urllib.parse import quote, urlencode, urlsplit, parse_qsl
 
 from logger import Logger
 from ws_live import WSLive
@@ -30,15 +30,17 @@ class JobProcessor:
     def __init__(self,
                  interval: int,
                  max_size: int,
-                 ws_limit: int):
+                 ws_limit: int,
+                 network: int):
         self.INTERVAL: float = interval / 1000.0
         self.MAX_SIZE: int = max_size
         self.WS_LIMIT = ws_limit
+        self.NETWORK = network
         self.websockets = None
         self._img = self._sub = self._mixin = ""
         self.queue: queue.PriorityQueue = queue.PriorityQueue()
         self.logger: Any = Logger(
-            logger_name="job").get_logger()
+            logger_name="job", level=Logger.DEBUG).get_logger()
         self.closed: bool = False
         self.ready: bool = False
         self.client: Any = None
@@ -127,7 +129,8 @@ class JobProcessor:
     async def process(self):
         """Process http task and send back to server
         """
-        async with ClientSession(headers=self._HEADERS) as self.client:
+        async with ClientSession(headers=self._HEADERS,
+                                 connector=TCPConnector(family=self.NETWORK)) as self.client:
             while True:
                 if self.queue.empty():
                     await asyncio.sleep(self.INTERVAL)
@@ -145,6 +148,7 @@ class JobProcessor:
                         #         "w_rid": w_rid,
                         #         "wts": wts
                         #     })
+                        #     query = {new_key: quote(query[new_key]) for new_key in query}
                         #     url = "".join([url.split("?")[0], "?", urlencode(query, encoding="utf-8")])
                         #     self.logger.debug(f"New url: {url}")
                         resp: asyncio.Task = asyncio.create_task(

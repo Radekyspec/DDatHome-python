@@ -8,26 +8,20 @@ from typing import Optional
 
 
 class Logger:
-    def __init__(self, level: Optional[str] = "INFO", logger_name: Optional[str] = "logger"):
+    INFO = INFO
+    DEBUG = DEBUG
+    WARNING = WARNING
+    ERROR = ERROR
+    WARN = WARN
+    CRITICAL = CRITICAL
+
+    def __init__(self, level: Optional[int] = INFO, logger_name: Optional[str] = "logger"):
         self.logger = None
         self.level = level
         self.name = logger_name
         self.set_logger()
 
     def set_logger(self) -> None:
-        if self.level and self.level == "INFO":
-            self.level = INFO
-        elif self.level and self.level == "DEBUG":
-            self.level = DEBUG
-        elif self.level and self.level == "WARNING":
-            self.level = WARNING
-        elif self.level and self.level == "ERROR":
-            self.level = ERROR
-        elif self.level and self.level == "WARN":
-            self.level = WARN
-        elif self.level and self.level == "CRITICAL":
-            self.level = CRITICAL
-
         try:
             os.makedirs(os.path.join(os.path.realpath(os.path.dirname(__file__)), "logs"))
         except (FileExistsError, OSError):
