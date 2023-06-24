@@ -5,9 +5,11 @@ DD@Home in Python<br>
 
 ---
 
-## 1.1.3 版本更新
+## 1.2.0 版本更新
 
-- 添加对 `/x/space/wbi/acc/info` api接口的支持
+- 增加了网络接口的设置, 可以自由选用IPv4/IPv6
+- 添加 `wbi` 接口验证
+- 修改了请求间隔逻辑
 
 ---
 
@@ -79,6 +81,10 @@ interval =
 max_size =
 ; 直播服务器连接数, 同时转发多少直播间 | 选填, 默认1000
 ws_limit =
+
+[Network]
+; IP协议, 仅v4/仅v6/两者同时使用 | 选填, 默认both
+ip = [ipv4/ipv6/both]
 ```
 
 ---

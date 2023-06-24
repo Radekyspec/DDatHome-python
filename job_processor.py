@@ -40,7 +40,7 @@ class JobProcessor:
         self._img = self._sub = self._mixin = ""
         self.queue: queue.PriorityQueue = queue.PriorityQueue()
         self.logger: Any = Logger(
-            logger_name="job", level=Logger.DEBUG).get_logger()
+            logger_name="job", level=Logger.INFO).get_logger()
         self.closed: bool = False
         self.ready: bool = False
         self.client: Any = None
@@ -135,6 +135,7 @@ class JobProcessor:
                 if self.queue.empty():
                     await asyncio.sleep(self.INTERVAL)
                     continue
+                start = time.time()
                 text: tuple = self.queue.get(block=False)
                 key, url = text[1:]
                 try:
@@ -165,9 +166,9 @@ class JobProcessor:
                 result: str = json.dumps(
                     result, ensure_ascii=False, separators=(",", ":"))
                 await self.websockets.send(result)
-                self.logger.debug("Proceeded a task and send back.")
+                self.logger.debug(f"Job {key} completed in {str(time.time() - start)[:5]}s.")
                 self.logger.debug(result)
-                await asyncio.sleep(self.INTERVAL)
+                # await asyncio.sleep(self.INTERVAL)
 
     async def pull_ws(self):
         """Pull a live room ws task from server."""

@@ -47,7 +47,7 @@ class ConfigParser:
                 "ip": "both",
             }
         })
-        self.parser.write(open("config.ini", "w"))
+        self.parser.write(open("config.ini", "w", encoding="utf-8"))
         self.logger.info("Generated default config.ini file. Please edit it then restart this program. ")
         import platform
 
@@ -67,5 +67,5 @@ class ConfigParser:
         if not self.has_section(section):
             self.parser[section] = {}
         self.parser[section][option] = content
-        self.parser.write(open("config.ini", "w"))
+        self.parser.write(open("config.ini", "w", encoding="utf-8"))
         return
