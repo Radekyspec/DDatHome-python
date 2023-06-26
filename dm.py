@@ -44,7 +44,7 @@ class BiliDM:
             "type": 0,
         }
         headers = {
-            "cookie": f"buvid3={self._uuid}",
+            "cookie": f"_uuid=; rpdid=; buvid3={self._uuid}",
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                           "Chrome/102.0.0.0 Safari/537.36",
         }
@@ -72,7 +72,7 @@ class BiliDM:
         header = header_len + header_op + \
                  bytes(str(payload), encoding="utf-8").hex()
         headers = {
-            "cookie": f"buvid3={self._uuid}",
+            "cookie": f"_uuid=; rpdid=; buvid3={self._uuid}",
             "origin": "https://live.bilibili.com",
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                           "Chrome/102.0.0.0 Safari/537.36",
@@ -155,13 +155,14 @@ class BiliDM:
         # op 为5意味着这是通知消息，cmd 基本就那几个了。
         if op == 5:
             try:
+                msg = ""
                 jd = json.loads(data[16:].decode('utf-8', errors='ignore'))
                 if jd["cmd"].startswith("DANMU_MSG"):
                     info = jd["info"]
                     if not info[0][9]:
                         mid = info[2][0]
                         timestamp = info[0][4]
-                        await self.ws.send(self._dumps(
+                        msg = self._dumps(
                             {
                                 "relay": {
                                     "roomid": self.room_id,
@@ -175,39 +176,39 @@ class BiliDM:
                                     "token": f"{self.room_id}_DANMU_MSG_{mid}_{timestamp}"
                                 }
                             }
-                        ))
+                        )
                 elif jd["cmd"] == "LIVE":
-                    await self.ws.send(self._dumps(
+                    msg = self._dumps(
                         {
                             "relay": {
                                 "roomid": self.room_id,
                                 "e": "LIVE"
                             }
                         }
-                    ))
+                    )
                 elif jd["cmd"] == "PREPARING":
-                    await self.ws.send(self._dumps(
+                    msg = self._dumps(
                         {
                             "relay": {
                                 "roomid": self.room_id,
                                 "e": "PREPARING"
                             }
                         }
-                    ))
+                    )
                 elif jd["cmd"] == "ROUND":
-                    await self.ws.send(self._dumps(
+                    msg = self._dumps(
                         {
                             "relay": {
                                 "roomid": self.room_id,
                                 "e": "ROUND"
                             }
                         }
-                    ))
+                    )
                 elif jd["cmd"] == "SEND_GIFT":
                     data = jd["data"]
                     mid = data["uid"]
                     tid = data["tid"]
-                    await self.ws.send(self._dumps(
+                    msg = self._dumps(
                         {
                             "relay": {
                                 "roomid": self.room_id,
@@ -222,12 +223,12 @@ class BiliDM:
                                 "token": f"{self.room_id}_SEND_GIFT_{mid}_{tid}"
                             }
                         }
-                    ))
+                    )
                 elif jd["cmd"] == "GUARD_BUY":
                     data = jd["data"]
                     mid = data["uid"]
                     start_time = data["start_time"]
-                    await self.ws.send(self._dumps(
+                    msg = self._dumps(
                         {
                             "relay": {
                                 "roomid": self.room_id,
@@ -243,7 +244,10 @@ class BiliDM:
                                 "token": f"{self.room_id}_GUARD_BUY_{mid}_{start_time}"
                             }
                         }
-                    ))
+                    )
+                if msg:
+                    await self.ws.send(msg)
+                    self.logger.debug(msg)
             except Exception:
                 self.logger.error(traceback.format_exc())
 

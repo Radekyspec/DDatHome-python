@@ -40,7 +40,7 @@ class WSLive(threading.Thread):
         is_new = False
         if self.current_loop is None or not self.current_loop.is_available():
             self.logger.debug("New manager created")
-            self.current_loop = DManager(len(self.managers))
+            self.current_loop = DManager(index=len(self.managers))
             self.managers.add(self.current_loop)
             is_new = True
         self.rooms += 1

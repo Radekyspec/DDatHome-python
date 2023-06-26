@@ -43,7 +43,7 @@ class ConfigParser:
                 "ws_limit": 1000,
             },
             "Network": {
-                "; ipv4/ipv6/both": None,
+                "; IP协议, ipv4/ipv6/同时使用(both) | 通常无需设置, 默认both": None,
                 "ip": "both",
             }
         })

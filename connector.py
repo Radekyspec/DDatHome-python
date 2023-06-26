@@ -15,7 +15,7 @@ from logger import Logger
 
 
 class Connector:
-    VERSION: str = "1.2.0"
+    VERSION: str = "1.2.1"
     DEFAULT_INTERVAL: int = 1000
     DEFAULT_SIZE: int = 10
     DEFAULT_LIMIT: int = 1000
@@ -154,7 +154,6 @@ class Connector:
             ]
             # if not t:
             #     tasks.append(asyncio.create_task(self.processor.test_crash()))
-            # await converse.send(bytes("DDDhttp", encoding="utf-8"))
             try:
                 await asyncio.gather(*tasks)
             except websockets.ConnectionClosed:

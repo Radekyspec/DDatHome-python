@@ -15,7 +15,7 @@ class DManager(threading.Thread):
     _started: bool
     _max_sleep: int
 
-    def __init__(self, index: int, size_limit: int = 20) -> None:
+    def __init__(self, index: int, size_limit: int = 50) -> None:
         super().__init__(name=f"DManager-{str(index)}", daemon=True)
         self._size = 0
         self._LIMIT = size_limit
