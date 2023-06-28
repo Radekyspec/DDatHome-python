@@ -10,17 +10,19 @@ from typing import Any
 from aiohttp import ClientSession, TCPConnector
 from aiohttp.client_exceptions import ClientError
 from async_timeout import timeout
+from asyncio import TimeoutError
 from functools import reduce
 from random import random
 from urllib.parse import quote, urlencode, urlsplit, parse_qsl
 
 from logger import Logger
+from uuid import uuid1
 from ws_live import WSLive
 
 
 class JobProcessor:
     _HEADERS = {
-        "cookie": "_uuid=; rpdid=; buvid3=1DF2C10A-0124-4B27-AEA3-3D7961AF671151DDinfoc",
+        "cookie": f"_uuid=; rpdid=; buvid3={str(uuid1()).upper() + 'infoc'}",
         "user-agent": "Mozilla/5.0",
     }
     _img: str
@@ -107,8 +109,13 @@ class JobProcessor:
     async def update_wbi(self):
         await asyncio.sleep(.1)
         while not self.closed:
-            async with self.client.get("https://api.bilibili.com/x/web-interface/nav") as resp:
-                resp = json.loads(await resp.text(encoding="utf-8"))
+            try:
+                with timeout(10):
+                    async with self.client.get("https://api.bilibili.com/x/web-interface/nav") as resp:
+                        resp = json.loads(await resp.text(encoding="utf-8"))
+            except (OSError, ClientError, TimeoutError):
+                await asyncio.sleep(1)
+                await self.update_wbi()
             wbi_img: dict = resp["data"]["wbi_img"]
             img_url: str = wbi_img.get("img_url")
             sub_url: str = wbi_img.get("sub_url")
@@ -158,9 +165,7 @@ class JobProcessor:
                         resp: asyncio.Task = asyncio.create_task(
                             self.fetch(self.client, url))
                         resp: str = await resp
-                except asyncio.TimeoutError:
-                    continue
-                except (OSError, ClientError):
+                except (OSError, ClientError, TimeoutError):
                     continue
                 result: dict[str, str] = {
                     "key": key,

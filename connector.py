@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import platform
-import random
-import string
 from socket import AF_INET, AF_INET6
 from urllib.parse import quote
 
@@ -12,6 +10,7 @@ import websockets
 from config_parser import ConfigParser
 from job_processor import JobProcessor
 from logger import Logger
+from uuid import uuid1
 
 
 class Connector:
@@ -42,19 +41,12 @@ class Connector:
 
     @property
     def uuid(self) -> str:
-        digits: list[str] = [
-            "".join(random.sample(string.hexdigits, 8)),
-            "".join(random.sample(string.hexdigits, 4)),
-            "".join(random.sample(string.hexdigits, 4)),
-            "".join(random.sample(string.hexdigits, 4)),
-            "".join(random.sample(string.hexdigits, 17))
-        ]
-        default_uuid = "-".join(digits).upper() + "infoc"
-        uuid: str = self.parser.get_parser().get("Settings", "uuid", fallback=default_uuid)
-        if not uuid:
-            uuid = default_uuid
-        self.parser.save(section="Settings", option="uuid", content=uuid)
-        return uuid
+        default_uuid = str(uuid1()).upper() + "infoc"
+        dd_uuid: str = self.parser.get_parser().get("Settings", "uuid", fallback=default_uuid)
+        if not dd_uuid:
+            dd_uuid = default_uuid
+        self.parser.save(section="Settings", option="uuid", content=dd_uuid)
+        return dd_uuid
 
     @property
     def interval(self) -> int:

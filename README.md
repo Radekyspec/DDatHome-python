@@ -5,11 +5,12 @@ DD@Home in Python<br>
 
 ---
 
-## 1.2.0 版本更新
+## 1.2.2 版本更新
 
 - 增加了网络接口的设置, 可以自由选用IPv4/IPv6
-- 添加 `wbi` 接口验证
+- 添加 `wbi` 接口验证API
 - 修改了请求间隔逻辑
+- 捕捉了一些请求异常
 
 ---
 
@@ -18,19 +19,19 @@ DD@Home in Python<br>
 1. 进入项目目录
 
 ```sh
-$ cd DDatHome-python
+cd DDatHome-python
 ```
 
 2. 拉取最新代码
 
 ```sh
-$ git pull
+git pull
 ```
 
 3. 更新依赖库
 
 ```sh
-$ pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ---
@@ -39,26 +40,26 @@ $ pip install -r requirements.txt
 
 ### 所需环境
 
-* 3.7 <= Python <= 3.9
+* 3.7 <= Python <= 3.11
 
 ### 克隆仓库
 
 ```sh
-$ git clone https://github.com/Radekyspec/DDatHome-python.git
+git clone https://github.com/Radekyspec/DDatHome-python.git
 
-$ cd DDatHome-python
+cd DDatHome-python
 ```
 
 ### 安装依赖
 
 ```shell
-$ pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 运行
 
 ```shell
-$ python main.py
+python main.py
 ```
 
 ---
@@ -83,7 +84,7 @@ max_size =
 ws_limit =
 
 [Network]
-; IP协议, 仅v4/仅v6/两者同时使用 | 选填, 默认both
+; IP协议, ipv4/ipv6/同时使用(both) | 通常无需设置, 默认both
 ip = [ipv4/ipv6/both]
 ```
 

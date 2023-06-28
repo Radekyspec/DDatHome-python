@@ -4,13 +4,15 @@ import asyncio
 import aiohttp
 import json
 import traceback
-import random
-import string
 
 import brotli
 import websockets
 
+from aiohttp.client_exceptions import ClientError
+from async_timeout import timeout
+from asyncio import TimeoutError
 from logger import Logger
+from uuid import uuid1
 
 
 class BiliDM:
@@ -25,18 +27,6 @@ class BiliDM:
     def set_ws(self, ws_client):
         self.ws = ws_client
 
-    @property
-    def _uuid(self):
-        digits: list[str] = [
-            "".join(random.sample(string.hexdigits, 8)),
-            "".join(random.sample(string.hexdigits, 4)),
-            "".join(random.sample(string.hexdigits, 4)),
-            "".join(random.sample(string.hexdigits, 4)),
-            "".join(random.sample(string.hexdigits, 17))
-        ]
-        uuid: str = "-".join(digits).upper() + "infoc"
-        return uuid
-
     async def get_key(self):
         url = "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo"
         payload = {
@@ -44,14 +34,19 @@ class BiliDM:
             "type": 0,
         }
         headers = {
-            "cookie": f"_uuid=; rpdid=; buvid3={self._uuid}",
+            "cookie": f"_uuid=; rpdid=; buvid3={str(uuid1()).upper() + 'infoc'}",
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                           "Chrome/102.0.0.0 Safari/537.36",
         }
-        async with aiohttp.request("GET", url, params=payload, headers=headers) as resp:
-            # self.wss_url = self.wss_url + resp["data"]["host_list"][0]["host"] + "/sub"
-            resp = json.loads(await resp.text(encoding="utf-8"))
-            return resp["data"]["token"]
+        try:
+            with timeout(10):
+                async with aiohttp.request("GET", url, params=payload, headers=headers) as resp:
+                    # self.wss_url = self.wss_url + resp["data"]["host_list"][0]["host"] + "/sub"
+                    resp = json.loads(await resp.text(encoding="utf-8"))
+                    return resp["data"]["token"]
+        except (TimeoutError, OSError, ClientError):
+            await asyncio.sleep(1)
+            return await self.get_key()
 
     async def startup(self):
         key = await self.get_key()
@@ -72,7 +67,7 @@ class BiliDM:
         header = header_len + header_op + \
                  bytes(str(payload), encoding="utf-8").hex()
         headers = {
-            "cookie": f"_uuid=; rpdid=; buvid3={self._uuid}",
+            "cookie": f"_uuid=; rpdid=; buvid3={str(uuid1()).upper() + 'infoc'}",
             "origin": "https://live.bilibili.com",
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                           "Chrome/102.0.0.0 Safari/537.36",
