@@ -14,7 +14,7 @@ from uuid import uuid1
 
 
 class Connector:
-    VERSION: str = "1.2.2"
+    VERSION: str = "1.2.3"
     DEFAULT_INTERVAL: int = 1000
     DEFAULT_SIZE: int = 10
     DEFAULT_LIMIT: int = 1000

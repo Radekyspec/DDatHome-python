@@ -45,11 +45,12 @@ class BiliDM:
                     resp = json.loads(await resp.text(encoding="utf-8"))
                     return resp["data"]["token"]
         except (TimeoutError, OSError, ClientError):
-            await asyncio.sleep(1)
-            return await self.get_key()
+            self.closed = True
 
     async def startup(self):
         key = await self.get_key()
+        if self.closed:
+            return
         payload = json.dumps(
             {
                 "uid": 0,
@@ -79,7 +80,8 @@ class BiliDM:
             self.logger.debug(
                 "[{room_id}]  Connected to danmaku server.".format(room_id=self.room_id))
             tasks = [asyncio.create_task(self.heart_beat(self.bili_ws)),
-                     asyncio.create_task(self.receive_dm(self.bili_ws))]
+                     asyncio.create_task(self.receive_dm(self.bili_ws)),
+                     ]
             try:
                 await asyncio.gather(*tasks)
             except websockets.ConnectionClosed:
