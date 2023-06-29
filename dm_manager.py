@@ -14,7 +14,7 @@ class DManager(threading.Thread):
     _rooms: set[BiliDM]
     manager_started: bool
 
-    def __init__(self, index: int, size_limit: int = 5) -> None:
+    def __init__(self, index: int, size_limit: int = 50) -> None:
         super().__init__(name=f"DManager-{str(index)}", daemon=True)
         self._size = 0
         self._LIMIT = size_limit
