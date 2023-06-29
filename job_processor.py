@@ -77,13 +77,13 @@ class JobProcessor:
             receive_text: str = await self.websockets.recv()
             text: Any = json.loads(receive_text)
             if "empty" in text:
-                self.logger.debug(f"No job, wait")
+                self.logger.debug(f"No job, wait.")
             elif "data" in text:
                 task_type = text["data"].get("type", None)
                 if task_type == "http":
                     self.queue.put(
-                        (str(time.time_ns())[:14], text["key"], text["data"]["url"]), block=False)
-                    self.logger.info(f"Job received {text['key']}")
+                        (str(time.time_ns()), text["key"], text["data"]["url"]), block=False)
+                    self.logger.info(f"Job {text['key']} received.")
                     self.logger.debug(f"{text}")
                 elif task_type == "query":
                     result = text["data"].get("result", None)
@@ -107,25 +107,25 @@ class JobProcessor:
         return le[:32]
 
     async def update_wbi(self):
-        await asyncio.sleep(.1)
-        while not self.closed:
-            try:
-                with timeout(10):
-                    async with self.client.get("https://api.bilibili.com/x/web-interface/nav") as resp:
-                        resp = json.loads(await resp.text(encoding="utf-8"))
-            except (OSError, ClientError, TimeoutError):
-                await asyncio.sleep(1)
-                await self.update_wbi()
-            wbi_img: dict = resp["data"]["wbi_img"]
-            img_url: str = wbi_img.get("img_url")
-            sub_url: str = wbi_img.get("sub_url")
-            self._img = img_url.split("/")[-1].split(".")[0]
-            self._sub = sub_url.split("/")[-1].split(".")[0]
-            self._mixin = self.get_mixin_key(self._img + self._sub)
-            self.logger.debug(f"Update mixin key: {self._mixin}")
-            if not self.ready:
-                self.ready = True
-            await asyncio.sleep(300)
+        self.ready = True
+        # await asyncio.sleep(.1)
+        # while not self.closed:
+        #     try:
+        #         with timeout(10):
+        #             async with self.client.get("https://api.bilibili.com/x/web-interface/nav") as resp:
+        #                 resp = json.loads(await resp.text(encoding="utf-8"))
+        #     except (OSError, ClientError, TimeoutError):
+        #         continue
+        #     wbi_img: dict = resp["data"]["wbi_img"]
+        #     img_url: str = wbi_img.get("img_url")
+        #     sub_url: str = wbi_img.get("sub_url")
+        #     self._img = img_url.split("/")[-1].split(".")[0]
+        #     self._sub = sub_url.split("/")[-1].split(".")[0]
+        #     self._mixin = self.get_mixin_key(self._img + self._sub)
+        #     self.logger.debug(f"Update mixin key: {self._mixin}")
+        #     if not self.ready:
+        #         self.ready = True
+        #     await asyncio.sleep(300)
 
     async def enc_wbi(self, params: dict):
         wts = int(time.time())
@@ -146,8 +146,7 @@ class JobProcessor:
                     await asyncio.sleep(self.INTERVAL)
                     continue
                 start = time.time()
-                text: tuple = self.queue.get(block=False)
-                key, url = text[1:]
+                _, key, url = self.queue.get(block=False)
                 try:
                     with timeout(10):
                         # resp = await self.fetch(client, url)
@@ -166,6 +165,7 @@ class JobProcessor:
                             self.fetch(self.client, url))
                         resp: str = await resp
                 except (OSError, ClientError, TimeoutError):
+                    self.logger.info(f"Job {key} failed.")
                     continue
                 result: dict[str, str] = {
                     "key": key,

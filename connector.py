@@ -142,7 +142,7 @@ class Connector:
                 asyncio.create_task(self.processor.process()),
                 asyncio.create_task(self.processor.monitor()),
                 asyncio.create_task(self.processor.pull_ws()),
-                asyncio.create_task(self.processor.update_wbi())
+                asyncio.create_task(self.processor.update_wbi()),
             ]
             # if not t:
             #     tasks.append(asyncio.create_task(self.processor.test_crash()))
