@@ -20,7 +20,7 @@ class BiliDM:
         self.ws = ws
         self.bili_ws = None
         self.room_id = str(room_id)
-        self.logger = Logger(logger_name="live-ws").get_logger()
+        self.logger = Logger(logger_name="live-ws", level=Logger.INFO).get_logger()
         self.wss_url = "wss://broadcastlv.chat.bilibili.com/sub"
         self.closed = False
 

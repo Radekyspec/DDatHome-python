@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import threading
+import time
 
 from dm import BiliDM
 from typing import Optional
@@ -20,15 +21,18 @@ class DManager(threading.Thread):
         self._LIMIT = size_limit
         self._rooms = set()
         self.manager_started = False
+        self._loop = None
 
     def set_ws(self, ws_client) -> None:
         [room.set_ws(ws_client) for room in self._rooms]
 
     def watch(self, room_id: int, ws_client) -> None:
+        while self._loop is None:
+            time.sleep(.1)
         room = BiliDM(room_id, ws_client)
         self._rooms.add(room)
         self._size += 1
-        asyncio.run_coroutine_threadsafe(room.startup(), asyncio.get_event_loop())
+        asyncio.run_coroutine_threadsafe(room.startup(), self._loop)
 
     def is_available(self) -> bool:
         return self._size < self._LIMIT
@@ -52,7 +56,8 @@ class DManager(threading.Thread):
 
     def run(self) -> None:
         try:
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            asyncio.get_event_loop().run_until_complete(self.startup())
+            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._loop)
+            self._loop.run_until_complete(self.startup())
         except KeyboardInterrupt:
             print("exit with keyboard")
