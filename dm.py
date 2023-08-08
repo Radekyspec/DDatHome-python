@@ -1,30 +1,30 @@
 from __future__ import annotations
 
 import asyncio
-import aiohttp
 import json
 import traceback
+from asyncio import TimeoutError
+from uuid import uuid1
 
+import aiohttp
 import brotli
 import websockets
-
 from aiohttp.client_exceptions import ClientError
 from async_timeout import timeout
-from asyncio import TimeoutError
+
 from logger import Logger
-from uuid import uuid1
 
 
 class BiliDM:
-    def __init__(self, room_id, ws):
+    def __init__(self, room_id, ws) -> None:
         self.ws = ws
         self.bili_ws = None
         self.room_id = str(room_id)
-        self.logger = Logger(logger_name="live-ws", level=Logger.INFO).get_logger()
+        self.logger = Logger(logger_name="live-ws", level=Logger.INFO)
         self.wss_url = "wss://broadcastlv.chat.bilibili.com/sub"
         self.closed = False
 
-    def set_ws(self, ws_client):
+    def set_ws(self, ws_client) -> None:
         self.ws = ws_client
 
     async def get_key(self):
@@ -53,7 +53,7 @@ class BiliDM:
             return
         payload = json.dumps(
             {
-                "uid": 0,
+                "uid": 2,
                 "roomid": int(self.room_id),
                 "protover": 3,
                 "platform": "web",

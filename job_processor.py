@@ -35,21 +35,20 @@ class JobProcessor:
                  ws_limit: int,
                  network: int):
         self.INTERVAL: float = interval / 1000.0
-        self.MAX_SIZE: int = max_size
-        self.WS_LIMIT = ws_limit
-        self.NETWORK = network
-        self.websockets = None
+        self.MAX_SIZE, self.WS_LIMIT, self.NETWORK = max_size, ws_limit, network
+        self.websockets = self._ws_recv = self._ws_send = None
         self._img = self._sub = self._mixin = ""
         self.queue: queue.PriorityQueue = queue.PriorityQueue()
         self.logger: Any = Logger(
-            logger_name="job", level=Logger.INFO).get_logger()
-        self.closed: bool = False
-        self.ready: bool = False
-        self.client: Any = None
+            logger_name="job", level=Logger.INFO)
+        self.closed = self.ready = False
+        self.client: ClientSession = ClientSession(headers=self._HEADERS,
+                                                   connector=TCPConnector(family=self.NETWORK))
+        self._method_get = self.client.get
         self.bili_ws = WSLive(self.WS_LIMIT)
 
     def set_ws(self, websockets):
-        self.websockets = websockets
+        self.websockets, self._ws_recv, self._ws_send = websockets, websockets.recv, websockets.send
         self.bili_ws.set_ws(websockets)
         if not self.bili_ws.started:
             self.bili_ws.start()
@@ -73,15 +72,16 @@ class JobProcessor:
         """
         while not self.ready:
             await asyncio.sleep(1)
+        queue_put = self.queue.put
         while True:
-            receive_text: str = await self.websockets.recv()
+            receive_text: str = await self._ws_recv()
             text: Any = json.loads(receive_text)
             if "empty" in text:
                 self.logger.debug(f"No job, wait.")
             elif "data" in text:
                 task_type = text["data"].get("type", None)
                 if task_type == "http":
-                    self.queue.put(
+                    queue_put(
                         (str(time.time_ns()), text["key"], text["data"]["url"]), block=False)
                     self.logger.info(f"Job {text['key']} received.")
                     self.logger.debug(f"{text}")
@@ -90,9 +90,8 @@ class JobProcessor:
                     if self.bili_ws.started:
                         self.bili_ws.watch(result)
 
-    @staticmethod
-    async def fetch(client, url):
-        async with client.get(url) as resp:
+    async def fetch(self, url):
+        async with self._method_get(url) as resp:
             return await resp.text(encoding="utf-8")
 
     @staticmethod
@@ -139,44 +138,43 @@ class JobProcessor:
     async def process(self):
         """Process http task and send back to server
         """
-        async with ClientSession(headers=self._HEADERS,
-                                 connector=TCPConnector(family=self.NETWORK)) as self.client:
-            while True:
-                if self.queue.empty():
-                    await asyncio.sleep(self.INTERVAL)
-                    continue
-                start = time.time()
-                _, key, url = self.queue.get(block=False)
-                try:
-                    with timeout(10):
-                        # resp = await self.fetch(client, url)
-                        # url_split = urlsplit(url)
-                        # if "wbi" in str(url_split.path):
-                        #     query = dict(parse_qsl(url_split.query))
-                        #     w_rid, wts = await self.enc_wbi(query)
-                        #     query.update({
-                        #         "w_rid": w_rid,
-                        #         "wts": wts
-                        #     })
-                        #     query = {new_key: quote(query[new_key]) for new_key in query}
-                        #     url = "".join([url.split("?")[0], "?", urlencode(query, encoding="utf-8")])
-                        #     self.logger.debug(f"New url: {url}")
-                        resp: asyncio.Task = asyncio.create_task(
-                            self.fetch(self.client, url))
-                        resp: str = await resp
-                except (OSError, ClientError, TimeoutError):
-                    self.logger.info(f"Job {key} failed.")
-                    continue
-                result: dict[str, str] = {
-                    "key": key,
-                    "data": resp,
-                }
-                result: str = json.dumps(
-                    result, ensure_ascii=False, separators=(",", ":"))
-                await self.websockets.send(result)
-                self.logger.info(f"Job {key} completed in {str(time.time() - start)[:5]}s.")
-                self.logger.debug(result)
-                # await asyncio.sleep(self.INTERVAL)
+        is_empty = self.queue.empty
+        queue_get = self.queue.get
+        json_dumps = json.dumps
+        while True:
+            if is_empty():
+                await asyncio.sleep(self.INTERVAL)
+                continue
+            start = time.time()
+            _, key, url = queue_get(block=False)
+            try:
+                async with timeout(10):
+                    # resp = await self.fetch(client, url)
+                    # url_split = urlsplit(url)
+                    # if "wbi" in str(url_split.path):
+                    #     query = dict(parse_qsl(url_split.query))
+                    #     w_rid, wts = await self.enc_wbi(query)
+                    #     query.update({
+                    #         "w_rid": w_rid,
+                    #         "wts": wts
+                    #     })
+                    #     query = {new_key: quote(query[new_key]) for new_key in query}
+                    #     url = "".join([url.split("?")[0], "?", urlencode(query, encoding="utf-8")])
+                    #     self.logger.debug(f"New url: {url}")
+                    resp = await self.fetch(url)
+            except (OSError, ClientError, TimeoutError):
+                self.logger.info(f"Job {key} failed.")
+                continue
+            result: dict[str, str] = {
+                "key": key,
+                "data": resp,
+            }
+            result: str = json_dumps(
+                result, ensure_ascii=False, separators=(",", ":"))
+            await self._ws_send(result)
+            self.logger.info(f"Job {key} completed in {str(time.time() - start)[:5]}s.")
+            self.logger.debug(result)
+            # await asyncio.sleep(self.INTERVAL)
 
     async def pull_ws(self):
         """Pull a live room ws task from server."""
@@ -190,14 +188,14 @@ class JobProcessor:
                 }
                 result = json.dumps(
                     payload, ensure_ascii=False, separators=(",", ":"))
-                await self.websockets.send(result)
+                await self._ws_send(result)
 
     async def close(self):
         """Close connection pool
         Stop pulling task from server
         """
         self.closed: bool = True
-        self.bili_ws.close()
+        self.bili_ws.ws_close()
         while True:
             if self.client is not None and self.queue.empty():
                 await self.client.close()

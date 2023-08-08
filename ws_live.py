@@ -1,22 +1,27 @@
 from __future__ import annotations
 
 import time
-import threading
-
 from concurrent.futures import ThreadPoolExecutor
+from threading import Thread
+from typing import Optional
+
 from dm_manager import DManager
 from logger import Logger
 
 
-class WSLive(threading.Thread):
+class WSLive(Thread):
+    started: bool
+    logger: Logger
     managers: set[DManager]
     rooms: int
     lived: set[int]
+    pool: ThreadPoolExecutor
+    current_loop: Optional[DManager]
 
-    def __init__(self, ws_limit: int):
+    def __init__(self, ws_limit: int) -> None:
         super().__init__(name="WSLive", daemon=True)
         self.started = False
-        self.logger = Logger(logger_name="bili-ws", level=Logger.INFO).get_logger()
+        self.logger = Logger(logger_name="bili-ws", level=Logger.INFO)
         self.managers = set()
         self.rooms = 0
         self.lived = set()
@@ -24,11 +29,11 @@ class WSLive(threading.Thread):
         self.ws = None
         self.current_loop = None
 
-    def set_ws(self, ws_client):
+    def set_ws(self, ws_client) -> None:
         self.ws = ws_client
         [room.set_ws(ws_client) for room in self.managers]
 
-    def startup(self):
+    def startup(self) -> None:
         self.started = True
         while self.started:
             self._clean_dead_rooms()
@@ -55,7 +60,7 @@ class WSLive(threading.Thread):
             if manager.is_available():
                 return manager
 
-    def watch(self, room_id: int):
+    def watch(self, room_id: int) -> None:
         if not room_id or room_id in self.lived:
             return
         is_new = False
@@ -71,7 +76,7 @@ class WSLive(threading.Thread):
         self.logger.debug(f"WATCH: {room_id}")
         self.add(room_id, is_new)
 
-    def add(self, room_id: int, is_new: bool):
+    def add(self, room_id: int, is_new: bool) -> None:
         if is_new:
             self.pool.submit(self.current_loop.start)
             self.logger.debug("New thread in pool")
@@ -85,6 +90,6 @@ class WSLive(threading.Thread):
         except KeyboardInterrupt:
             print("exit with keyboard")
 
-    def close(self):
+    def ws_close(self) -> None:
         self.started = False
         self.pool.shutdown(wait=False)

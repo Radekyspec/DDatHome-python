@@ -3,14 +3,14 @@ from __future__ import annotations
 import asyncio
 import platform
 from socket import AF_INET, AF_INET6
-from urllib.parse import quote
+from uuid import uuid1
 
 import websockets
+from urllib.parse import quote
 
 from config_parser import ConfigParser
 from job_processor import JobProcessor
 from logger import Logger
-from uuid import uuid1
 
 
 class Connector:
@@ -19,11 +19,11 @@ class Connector:
     DEFAULT_SIZE: int = 10
     DEFAULT_LIMIT: int = 1000
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.parser: ConfigParser = ConfigParser()
         self.closed: bool = False
         self.runtime: str = "Python" + platform.python_version()
-        self.logger = Logger(logger_name="ws").get_logger()
+        self.logger = Logger(logger_name="ws")
         self.aws = None
         self.processor = None
 

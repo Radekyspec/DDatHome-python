@@ -12,7 +12,7 @@ global logger
 async def start():
     global logger
     loop = asyncio.get_event_loop()
-    logger = Logger(logger_name="start", level=Logger.DEBUG).get_logger()
+    logger = Logger(logger_name="start", level=Logger.DEBUG)
     logger.info("D" * (shutil.get_terminal_size().columns - 34))
     logger.info("Thank you for participating DD@Home,")
     logger.info("Please read README.md for more information;")

@@ -2,20 +2,21 @@ from __future__ import annotations
 
 import configparser
 import os
+from typing import NoReturn
 
 from logger import Logger
 
 
 class ConfigParser:
-    logger = Logger(logger_name="config").get_logger()
+    logger = Logger(logger_name="config")
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.parser = configparser.ConfigParser(allow_no_value=True)
         if not os.path.exists("config.ini"):
             self.init_config()
         self.get_parser()
 
-    def get_parser(self):
+    def get_parser(self) -> configparser.ConfigParser:
         self.parser.clear()
         try:
             self.parser.read("config.ini", encoding="utf-8")
@@ -23,7 +24,7 @@ class ConfigParser:
             self.parser.read("config.ini", encoding="gbk")
         return self.parser
 
-    def init_config(self):
+    def init_config(self) -> NoReturn:
         self.parser.clear()
         try:
             os.remove("config.ini")
@@ -55,10 +56,10 @@ class ConfigParser:
             input()
         exit(0)
 
-    def has_section(self, section):
+    def has_section(self, section) -> bool:
         return self.parser.has_section(section)
 
-    def save(self, section, option, content):
+    def save(self, section, option, content) -> None:
         self.parser.clear()
         try:
             self.parser.read("config.ini", encoding="utf-8")
@@ -67,5 +68,6 @@ class ConfigParser:
         if not self.has_section(section):
             self.parser[section] = {}
         self.parser[section][option] = content
-        self.parser.write(open("config.ini", "w", encoding="utf-8"))
-        return
+        with open("config.ini", "w", encoding="utf-8") as f:
+            self.parser.write(f)
+

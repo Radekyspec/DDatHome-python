@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import os
-from logging import getLogger, StreamHandler, FileHandler, Formatter, DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL
+from logging import StreamHandler, FileHandler, Formatter, DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL
 from logging import Logger as DefaultLogger
 from time import strftime, localtime
 from typing import Optional
 
 
-class Logger:
+class Logger(DefaultLogger):
     INFO = INFO
     DEBUG = DEBUG
     WARNING = WARNING
@@ -15,10 +15,9 @@ class Logger:
     WARN = WARN
     CRITICAL = CRITICAL
 
-    def __init__(self, level: Optional[int] = INFO, logger_name: Optional[str] = "logger"):
-        self.logger = None
-        self.level = level
-        self.name = logger_name
+    def __init__(self, level: Optional[int] = INFO, logger_name: Optional[str] = "logger") -> None:
+        super().__init__(name=logger_name,
+                         level=level)
         self.set_logger()
 
     def set_logger(self) -> None:
@@ -27,8 +26,7 @@ class Logger:
         except (FileExistsError, OSError):
             pass
 
-        self.logger = getLogger(self.name)
-        self.logger.setLevel(self.level)
+        self.setLevel(self.level)
         stream_handler = StreamHandler()
         stream_handler.setLevel(self.level)
         file_handler = FileHandler(
@@ -41,10 +39,10 @@ class Logger:
         formatter = Formatter(fmt="%(asctime)s - [%(levelname)s] %(message)s")
         stream_handler.setFormatter(formatter)
         file_handler.setFormatter(formatter)
-        self.logger.handlers.clear()
-        self.logger.addHandler(stream_handler)
-        self.logger.addHandler(file_handler)
+        self.handlers.clear()
+        self.addHandler(stream_handler)
+        self.addHandler(file_handler)
         return
 
     def get_logger(self) -> DefaultLogger:
-        return self.logger
+        return self

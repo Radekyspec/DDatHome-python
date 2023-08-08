@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
+from typing import Optional
 
 from dm import BiliDM
-from typing import Optional
 
 
 class DManager(threading.Thread):
