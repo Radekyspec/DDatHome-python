@@ -5,7 +5,8 @@ import platform
 from socket import AF_INET, AF_INET6
 from uuid import uuid1
 
-import websockets
+from websockets import ConnectionClosed
+from websockets.sync.client import connect
 from urllib.parse import quote
 
 from config_parser import ConfigParser
@@ -14,7 +15,7 @@ from logger import Logger
 
 
 class Connector:
-    VERSION: str = "1.2.3"
+    VERSION: str = "1.3.0"
     DEFAULT_INTERVAL: int = 1000
     DEFAULT_SIZE: int = 10
     DEFAULT_LIMIT: int = 1000
@@ -107,7 +108,7 @@ class Connector:
             self.parser.save(section="Network", option="ip", content="both")
             return 0
 
-    async def connect(self) -> None:
+    def connect(self) -> None:
         """Establish the websockets connection
         Create the job processor
         Check out the status of original connection
@@ -120,8 +121,6 @@ class Connector:
             uuid=self.uuid,
             name=self.name,
         )
-        if self.aws is not None:
-            await self.aws.close()
         reconnect = False
         # t = False
         self.processor = JobProcessor(
@@ -130,34 +129,24 @@ class Connector:
             ws_limit=self.ws_limit,
             network=self.network
         )
-        async for self.aws in websockets.connect(url):
-            if reconnect:
-                self.logger.info("重连成功")
-                reconnect = False
-            self.logger.info(url)
-            self.processor.set_ws(self.aws)
-            tasks = [
-                asyncio.create_task(self.processor.pull_task()),
-                asyncio.create_task(self.processor.receive_task()),
-                asyncio.create_task(self.processor.process()),
-                asyncio.create_task(self.processor.monitor()),
-                asyncio.create_task(self.processor.pull_ws()),
-                asyncio.create_task(self.processor.update_wbi()),
-            ]
-            # if not t:
-            #     tasks.append(asyncio.create_task(self.processor.test_crash()))
-            try:
-                await asyncio.gather(*tasks)
-            except websockets.ConnectionClosed:
-                # t = True
-                [task.cancel() for task in tasks]
-                if not self.closed:
-                    self.logger.warning("与服务器的ws连接断开, 正在重新连接...")
-                    reconnect = True
-                    continue
-                break
+        while True:
+            with connect(url) as self.aws:
+                if reconnect:
+                    self.logger.info("重连成功")
+                    reconnect = False
+                self.logger.info(url)
+                try:
+                    self.processor.startup(self.aws)
+                except ConnectionClosed:
+                    # t = True
+                    self.processor.close()
+                    if not self.closed:
+                        self.logger.warning("与服务器的ws连接断开, 正在重新连接...")
+                        reconnect = True
+                        continue
+                    break
 
-    async def close(self) -> None:
+    def close(self) -> None:
         """Close all connection
         Including websockets and https
         """
@@ -165,6 +154,6 @@ class Connector:
         self.logger.info("Shutting down, waiting for tasks to complete...")
         self.logger.info("You may press Ctrl+C again to force quit")
         if self.processor is not None:
-            await self.processor.close()
+            self.processor.close()
         if self.aws is not None:
-            await self.aws.close()
+            self.aws.close()

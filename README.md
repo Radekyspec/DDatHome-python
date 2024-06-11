@@ -1,17 +1,17 @@
 # DDatHome-python
 DD@Home in Python<br>
 
-[DDatHome-nodejs](https://github.com/dd-center/DDatHome-nodejs)的Python异步实现
+[DDatHome-nodejs](https://github.com/dd-center/DDatHome-nodejs)的Python实现
 
 ---
 
-## 1.2.3 版本更新
+## 1.3.0 版本更新
 
 - 增加了网络接口的设置, 可以自由选用IPv4/IPv6
-- 添加 `wbi` 接口验证API
 - 修改了请求间隔逻辑
 - 捕捉了一些请求异常
-- 修复了一些可能的弹幕采集异常
+- 暂停弹幕采集
+- 更改为多线程任务获取与分发
 
 ---
 

@@ -23,13 +23,14 @@ class DManager(threading.Thread):
         self.manager_started = False
         self._loop = None
 
-    def set_ws(self, ws_client) -> None:
-        [room.set_ws(ws_client) for room in self._rooms]
+    def set_queue(self, send_queue) -> None:
+        [room.set_queue(send_queue) for room in self._rooms]
 
-    def watch(self, room_id: int, ws_client) -> None:
+    def watch(self, room_id: int, send_queue) -> None:
         while self._loop is None:
             time.sleep(.1)
-        room = BiliDM(room_id, ws_client)
+        room = BiliDM(room_id, self._loop)
+        room.set_queue(send_queue)
         self._rooms.add(room)
         self._size += 1
         asyncio.run_coroutine_threadsafe(room.startup(), self._loop)

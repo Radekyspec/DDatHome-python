@@ -26,12 +26,12 @@ class WSLive(Thread):
         self.rooms = 0
         self.lived = set()
         self.pool = ThreadPoolExecutor(max_workers=ws_limit)
-        self.ws = None
+        self.send_queue = None
         self.current_loop = None
 
-    def set_ws(self, ws_client) -> None:
-        self.ws = ws_client
-        [room.set_ws(ws_client) for room in self.managers]
+    def set_queue(self, send_queue) -> None:
+        self.send_queue = send_queue
+        [room.set_queue(send_queue) for room in self.managers]
 
     def startup(self) -> None:
         self.started = True
@@ -80,7 +80,7 @@ class WSLive(Thread):
         if is_new:
             self.pool.submit(self.current_loop.start)
             self.logger.debug("New thread in pool")
-        self.current_loop.watch(room_id, self.ws)
+        self.current_loop.watch(room_id, self.send_queue)
         self.logger.debug(f"OPEN: {room_id}")
         self.lived.add(room_id)
 

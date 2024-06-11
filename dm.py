@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import traceback
 from asyncio import TimeoutError
 from uuid import uuid1
@@ -16,16 +17,17 @@ from logger import Logger
 
 
 class BiliDM:
-    def __init__(self, room_id, ws) -> None:
-        self.ws = ws
+    def __init__(self, room_id, loop: asyncio.AbstractEventLoop) -> None:
+        self._loop = loop
+        self.send_queue = None
         self.bili_ws = None
         self.room_id = str(room_id)
         self.logger = Logger(logger_name="live-ws", level=Logger.INFO)
         self.wss_url = "wss://broadcastlv.chat.bilibili.com/sub"
         self.closed = False
 
-    def set_ws(self, ws_client) -> None:
-        self.ws = ws_client
+    def set_queue(self, send_queue) -> None:
+        self.send_queue = send_queue
 
     async def get_key(self):
         url = "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo"
@@ -39,7 +41,7 @@ class BiliDM:
                           "Chrome/102.0.0.0 Safari/537.36",
         }
         try:
-            with timeout(10):
+            async with timeout(10):
                 async with aiohttp.request("GET", url, params=payload, headers=headers) as resp:
                     # self.wss_url = self.wss_url + resp["data"]["host_list"][0]["host"] + "/sub"
                     resp = json.loads(await resp.text(encoding="utf-8"))
@@ -68,6 +70,7 @@ class BiliDM:
         header = header_len + header_op + \
                  bytes(str(payload), encoding="utf-8").hex()
         headers = {
+            "accept-language": "zh-CN",
             "cookie": f"_uuid=; rpdid=; buvid3={str(uuid1()).upper() + 'infoc'}",
             "origin": "https://live.bilibili.com",
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -107,14 +110,14 @@ class BiliDM:
         while not self.closed:
             receive_text = await ws.recv()
             if receive_text:
-                await self.process_dm(receive_text)
+                await self._loop.run_in_executor(None, self.process_dm, receive_text)
             await asyncio.sleep(0.1)
 
     @staticmethod
     def _dumps(data):
         return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
 
-    async def process_dm(self, data, is_decompressed=False):
+    def process_dm(self, data, is_decompressed=False):
         # 获取数据包的长度，版本和操作类型
         packet_len = int(data[:4].hex(), 16)
         ver = int(data[6:8].hex(), 16)
@@ -122,14 +125,13 @@ class BiliDM:
 
         # 有的时候可能会两个数据包连在一起发过来，所以利用前面的数据包长度判断，
         if len(data) > packet_len:
-            task = asyncio.create_task(self.process_dm(data[packet_len:]))
+            self.process_dm(data[packet_len:])
             data = data[:packet_len]
-            await task
 
         # brotli 压缩后的数据
         if ver == 3 and not is_decompressed:
             data = brotli.decompress(data[16:])
-            await self.process_dm(data, is_decompressed=True)
+            self.process_dm(data, is_decompressed=True)
             return
 
         # ver 为1的时候为进入房间后或心跳包服务器的回应。op 为3的时候为房间的人气值。
@@ -137,7 +139,7 @@ class BiliDM:
             attention = int(data[16:].hex(), 16)
             self.logger.debug(
                 "[{room_id}][ATTENTION]  {attention}".format(room_id=self.room_id, attention=attention))
-            await self.ws.send(self._dumps(
+            self.send_queue.put((time.time_ns(), self._dumps(
                 {
                     "relay": {
                         "roomid": self.room_id,
@@ -145,7 +147,7 @@ class BiliDM:
                         "data": attention
                     }
                 }
-            ))
+            )))
             return
 
         # ver 不为2也不为1目前就只能是0了，也就是普通的 json 数据。
@@ -243,7 +245,7 @@ class BiliDM:
                         }
                     )
                 if msg:
-                    await self.ws.send(msg)
+                    self.send_queue.put((0, msg))
                     self.logger.debug(msg)
             except Exception:
                 self.logger.error(traceback.format_exc())
